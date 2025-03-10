@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { onKeyStroke, useEventListener } from '@vueuse/core'
 
-import { isHomePage } from '~/utils/main'
+import { DRAWER_VIDEO_ENTER_PAGE_FULL, DRAWER_VIDEO_EXIT_PAGE_FULL } from '~/constants/globalEvents'
+import { settings } from '~/logic'
+import { isHomePage, isInIframe } from '~/utils/main'
 
 // TODO: support shortcuts like `Ctrl+Alt+T` to open in new tab, `Esc` to close
 
@@ -15,20 +17,37 @@ const emit = defineEmits<{
 }>()
 
 const show = ref(false)
+const headerShow = ref(false)
 const iframeRef = ref<HTMLIFrameElement | null>(null)
 const currentUrl = ref<string>(props.url)
+const showIframe = ref<boolean>(false)
 const delayCloseTimer = ref<NodeJS.Timeout | null>(null)
+const removeTopBarClassInjected = ref<boolean>(false)
 
 useEventListener(window, 'popstate', updateIframeUrl)
 nextTick(() => {
-  useEventListener(iframeRef.value?.contentWindow, 'pushstate', updateCurrentUrl)
+  useEventListener(iframeRef.value?.contentWindow, 'historyChange', updateCurrentUrl)
+  useEventListener(iframeRef.value?.contentWindow, 'popstate', updateCurrentUrl)
+
+  useEventListener(iframeRef.value?.contentWindow, 'DOMContentLoaded', () => {
+    if (headerShow.value) {
+      iframeRef.value?.contentWindow?.document.documentElement.classList.add('remove-top-bar-without-placeholder')
+      removeTopBarClassInjected.value = true
+    }
+    else {
+      iframeRef.value?.contentWindow?.document.documentElement.classList.remove('remove-top-bar-without-placeholder')
+      removeTopBarClassInjected.value = false
+    }
+  })
 })
 
-onMounted(async () => {
+onMounted(() => {
   history.pushState(null, '', props.url)
   show.value = true
-  await nextTick()
-  iframeRef.value?.focus()
+  headerShow.value = true
+  nextTick(() => {
+    iframeRef.value?.focus()
+  })
 })
 
 onBeforeUnmount(() => {
@@ -42,8 +61,8 @@ onUnmounted(() => {
 function updateCurrentUrl() {
   if (iframeRef.value?.contentWindow) {
     try {
-      currentUrl.value = iframeRef.value.contentWindow.location.href
-      history.pushState(null, '', currentUrl.value)
+      currentUrl.value = iframeRef.value.contentWindow.location.href.replace(/\/$/, '')
+      history.pushState(null, '', currentUrl.value.replace(/\/$/, ''))
     }
     catch (error) {
       console.error('Unable to access iframe URL:', error)
@@ -59,7 +78,7 @@ async function updateIframeUrl() {
   await nextTick()
 
   if (iframeRef.value?.contentWindow) {
-    iframeRef.value.contentWindow.location.replace(location.href)
+    iframeRef.value.contentWindow.location.replace(location.href.replace(/\/$/, ''))
   }
 }
 
@@ -69,6 +88,7 @@ async function handleClose() {
   }
   await releaseIframeResources()
   show.value = false
+  headerShow.value = false
   delayCloseTimer.value = setTimeout(() => {
     emit('close')
   }, 300)
@@ -77,7 +97,13 @@ async function handleClose() {
 async function releaseIframeResources() {
   // Clear iframe content
   currentUrl.value = 'about:blank'
-  iframeRef.value?.contentWindow?.document.write('')
+  /**
+   * eg: When use 'iframeRef.value?.contentWindow?.document' of t.bilibili.com iframe on bilibili.com, there may be cross domain issues
+   * set the src to 'about:blank' to avoid this issue, it also can release the memory
+   */
+  if (iframeRef.value) {
+    iframeRef.value.src = 'about:blank'
+  }
   await nextTick()
   iframeRef.value?.contentWindow?.close()
 
@@ -90,15 +116,26 @@ async function releaseIframeResources() {
 }
 
 function handleOpenInNewTab() {
-  window.open(props.url, '_blank')
+  if (iframeRef.value) {
+    window.open(iframeRef.value.contentWindow?.location.href.replace(/\/$/, ''), '_blank')
+    handleClose()
+  }
 }
 
 const isEscPressed = ref<boolean>(false)
 const escPressedTimer = ref<NodeJS.Timeout | null>(null)
+const disableEscPress = ref<boolean>(false)
 
 nextTick(() => {
   onKeyStroke('Escape', (e: KeyboardEvent) => {
     e.preventDefault()
+    if (settings.value.closeDrawerWithoutPressingEscAgain) {
+      clearTimeout(escPressedTimer.value!)
+      handleClose()
+      return
+    }
+    if (disableEscPress.value)
+      return
     if (isEscPressed.value) {
       handleClose()
     }
@@ -112,6 +149,24 @@ nextTick(() => {
       }, 1300)
     }
   }, { target: iframeRef.value?.contentWindow })
+})
+
+watchEffect(() => {
+  if (isInIframe())
+    return null
+
+  useEventListener(window, 'message', ({ data }) => {
+    switch (data) {
+      case DRAWER_VIDEO_ENTER_PAGE_FULL:
+        headerShow.value = false
+        disableEscPress.value = true
+        break
+      case DRAWER_VIDEO_EXIT_PAGE_FULL:
+        headerShow.value = true
+        disableEscPress.value = false
+        break
+    }
+  })
 })
 
 // const keys = useMagicKeys()
@@ -140,7 +195,7 @@ nextTick(() => {
 
     <Transition name="fade">
       <div
-        v-if="show"
+        v-if="headerShow"
         pos="relative top-0" flex="~ items-center justify-end gap-2"
         max-w="$bew-page-max-width" w-full h="$bew-top-bar-height"
         m-auto px-4
@@ -195,17 +250,25 @@ nextTick(() => {
     <Transition name="drawer">
       <div
         v-if="show"
-        pos="absolute top-$bew-top-bar-height left-0" of-hidden bg="$bew-bg"
+        :pos="`absolute ${headerShow ? 'top-$bew-top-bar-height' : 'top-0'} left-0`" of-hidden bg="$bew-bg"
         rounded="t-$bew-radius" w-full h-full
       >
-        <iframe
-          ref="iframeRef"
-          :src="currentUrl"
-          frameborder="0"
-          pointer-events-auto
-          pos="absolute bottom-$bew-top-bar-height left-0"
-          w-full h-full
-        />
+        <Transition name="fade">
+          <iframe
+            v-show="showIframe"
+            ref="iframeRef"
+            :src="props.url"
+            :style="{
+              // Prevent top bar shaking when before the remove-top-bar-without-placeholder class is injected
+              top: !removeTopBarClassInjected ? `calc(-1 * var(--bew-top-bar-height))` : '0',
+            }"
+            frameborder="0"
+            pointer-events-auto
+            pos="relative left-0"
+            w-full
+            h-full @load="showIframe = true"
+          />
+        </Transition>
       </div>
     </Transition>
   </div>

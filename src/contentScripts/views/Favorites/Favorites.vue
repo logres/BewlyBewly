@@ -2,17 +2,16 @@
 import { useI18n } from 'vue-i18n'
 
 import type { FavoriteCategory, FavoriteResource } from '~/components/TopBar/types'
-import { useApiClient } from '~/composables/api'
 import { useBewlyApp } from '~/composables/useAppProvider'
 import { TOP_BAR_VISIBILITY_CHANGE } from '~/constants/globalEvents'
 import { settings } from '~/logic'
 import type { FavoritesResult, Media as FavoriteItem } from '~/models/video/favorite'
 import type { FavoritesCategoryResult, List as CategoryItem } from '~/models/video/favoriteCategory'
+import api from '~/utils/api'
 import { getCSRF, getUserID, openLinkToNewTab, removeHttpFromUrl } from '~/utils/main'
 import emitter from '~/utils/mitt'
 
 const { t } = useI18n()
-const api = useApiClient()
 
 const favoriteCategories = reactive<CategoryItem[]>([])
 const favoriteResources = reactive<FavoriteItem[]>([])
@@ -32,11 +31,6 @@ const noMoreContent = ref<boolean>(false)
 const currentDraggedResource = ref<FavoriteResource>()
 
 onMounted(async () => {
-  await getFavoriteCategories()
-  changeCategory(favoriteCategories[0])
-
-  initPageAction()
-
   emitter.off(TOP_BAR_VISIBILITY_CHANGE)
   emitter.on(TOP_BAR_VISIBILITY_CHANGE, (val) => {
     shouldMoveCtrlBarUp.value = false
@@ -52,7 +46,15 @@ onMounted(async () => {
         shouldMoveCtrlBarUp.value = true
     }
   })
+
+  initPageAction()
+  initData()
 })
+
+async function initData() {
+  await getFavoriteCategories()
+  changeCategory(favoriteCategories[0])
+}
 
 onUnmounted(() => {
   emitter.off(TOP_BAR_VISIBILITY_CHANGE)
@@ -127,7 +129,7 @@ async function getFavoriteResources(
       if (!res.data.medias)
         noMoreContent.value = true
 
-      if (!haveScrollbar() && !noMoreContent.value)
+      if (!await haveScrollbar() && !noMoreContent.value)
         await getFavoriteResources(selectedCategory.value!.id, ++currentPageNum.value, keyword)
     }
   }
@@ -240,7 +242,7 @@ function isMusic(item: FavoriteResource) {
           <Loading v-if="isFullPageLoading" w-full h-full pos="absolute top-0 left-0" mt--50px />
         </Transition>
         <!-- favorite list -->
-        <div grid="~ 2xl:cols-4 xl:cols-3 lg:cols-2 md:cols-1 gap-5" m="t-55px b-6">
+        <div grid="~ 2xl:cols-4 xl:cols-3 lg:cols-2 md:cols-1 sm:cols-1 cols-1 gap-5" m="t-55px b-6">
           <TransitionGroup name="list">
             <VideoCard
               v-for="item in favoriteResources" :key="item.id" :video="{
@@ -248,9 +250,11 @@ function isMusic(item: FavoriteResource) {
                 duration: item.duration,
                 title: item.title,
                 cover: item.cover,
-                author: item.upper.name,
-                authorFace: item.upper.face,
-                mid: item.upper.mid,
+                author: {
+                  name: item.upper.name,
+                  authorFace: item.upper.face,
+                  mid: item.upper.mid,
+                },
                 view: item.cnt_info.play,
                 danmaku: item.cnt_info.danmaku,
                 publishedTimestamp: item.pubtime,
@@ -292,8 +296,10 @@ function isMusic(item: FavoriteResource) {
         <div pos="absolute top-0 left-0" w-full h-full z--1>
           <div absolute w-full h-full bg="$bew-fill-4" />
           <img
-            v-if="activatedCategoryCover" :src="removeHttpFromUrl(`${activatedCategoryCover}@480w_270h_1c`)" w-full
-            h-full object="cover center" blur-40px
+            v-if="activatedCategoryCover"
+            :src="removeHttpFromUrl(`${activatedCategoryCover}@480w_270h_1c`)"
+            w-full h-full object="cover center" blur-40px
+            relative z--1
           >
         </div>
 

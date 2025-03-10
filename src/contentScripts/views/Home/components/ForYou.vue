@@ -2,20 +2,20 @@
 import { onKeyStroke } from '@vueuse/core'
 import type { Ref } from 'vue'
 
-import { useApiClient } from '~/composables/api'
 import { useBewlyApp } from '~/composables/useAppProvider'
 import { FilterType, useFilter } from '~/composables/useFilter'
 import { LanguageType } from '~/enums/appEnums'
-import type { GridLayout } from '~/logic'
+import type { GridLayoutType } from '~/logic'
 import { accessKey, settings } from '~/logic'
 import type { AppForYouResult, Item as AppVideoItem } from '~/models/video/appForYou'
 import { Type as ThreePointV2Type } from '~/models/video/appForYou'
 import type { forYouResult, Item as VideoItem } from '~/models/video/forYou'
+import api from '~/utils/api'
 import { TVAppKey } from '~/utils/authProvider'
 import { isVerticalVideo } from '~/utils/uriParse'
 
 const props = defineProps<{
-  gridLayout: GridLayout
+  gridLayout: GridLayoutType
 }>()
 
 const emit = defineEmits<{
@@ -45,15 +45,14 @@ interface AppVideoElement {
   item?: AppVideoItem
 }
 
-const gridValue = computed((): string => {
+const gridClass = computed((): string => {
   if (props.gridLayout === 'adaptive')
-    return '~ 2xl:cols-5 xl:cols-4 lg:cols-3 md:cols-2 gap-5'
+    return 'grid-adaptive'
   if (props.gridLayout === 'twoColumns')
-    return '~ cols-1 xl:cols-2 gap-4'
-  return '~ cols-1 gap-4'
+    return 'grid-two-columns'
+  return 'grid-one-column'
 })
 
-const api = useApiClient()
 const videoList = ref<VideoElement[]>([])
 const appVideoList = ref<AppVideoElement[]>([])
 const isLoading = ref<boolean>(false)
@@ -98,11 +97,11 @@ watch(() => settings.value.recommendationMode, () => {
   initData()
 })
 
-onMounted(async () => {
+onMounted(() => {
   // Delay by 0.2 seconds to obtain the `settings.value.recommendationMode` value
   // otherwise the `settings.value.recommendationMode` value will be undefined
   // i have no idea to fix that...
-  setTimeout(async () => {
+  setTimeout(() => {
     initData()
   }, 200)
 
@@ -228,7 +227,7 @@ async function getRecommendVideos() {
 
     if (!needToLoginFirst.value) {
       await nextTick()
-      if (!haveScrollbar() || filledItems.length < PAGE_SIZE || filledItems.length < 1) {
+      if (!await haveScrollbar() || filledItems.length < PAGE_SIZE || filledItems.length < 1) {
         getRecommendVideos()
       }
     }
@@ -307,7 +306,7 @@ async function getAppRecommendVideos() {
 
     if (!needToLoginFirst.value) {
       await nextTick()
-      if (!haveScrollbar() || filledItems.length < PAGE_SIZE || filledItems.length < 1) {
+      if (!await haveScrollbar() || filledItems.length < PAGE_SIZE || filledItems.length < 1) {
         getAppRecommendVideos()
       }
     }
@@ -323,11 +322,6 @@ defineExpose({ initData })
 
 <template>
   <div>
-    <!-- By directly using predefined unocss grid properties, it is possible to dynamically set the grid attribute -->
-    <div hidden grid="~ 2xl:cols-5 xl:cols-4 lg:cols-3 md:cols-2 gap-5" />
-    <div hidden grid="~ cols-1 xl:cols-2 gap-4" />
-    <div hidden grid="~ cols-1 gap-4" />
-
     <Empty v-if="needToLoginFirst" mt-6 :description="$t('common.please_log_in_first')">
       <Button type="primary" @click="jumpToLoginPage()">
         {{ $t('common.login') }}
@@ -338,22 +332,25 @@ defineExpose({ initData })
       v-else
       ref="containerRef"
       m="b-0 t-0" relative w-full h-full
-      :grid="gridValue"
+      :class="gridClass"
     >
       <template v-if="settings.recommendationMode === 'web'">
         <VideoCard
           v-for="video in videoList"
           :key="video.uniqueId"
           :skeleton="!video.item"
+          type="rcmd"
           :video="video.item ? {
             id: video.item.id,
             duration: video.item.duration,
             title: video.item.title,
             cover: video.item.pic,
-            author: video.item.owner.name,
-            authorFace: video.item.owner.face,
-            followed: !!video.item.is_followed,
-            mid: video.item.owner.mid,
+            author: {
+              name: video.item.owner.name,
+              authorFace: video.item.owner.face,
+              followed: !!video.item.is_followed,
+              mid: video.item.owner.mid,
+            },
             view: video.item.stat.view,
             danmaku: video.item.stat.danmaku,
             publishedTimestamp: video.item.pubdate,
@@ -371,16 +368,18 @@ defineExpose({ initData })
           :key="video.uniqueId"
           ref="videoCardRef"
           :skeleton="!video.item"
-          :is-app="true"
+          type="appRcmd"
           :video="video.item ? {
             id: video.item.args.aid ?? 0,
             durationStr: video.item.cover_right_text,
             title: `${video.item.title}`,
             cover: `${video.item.cover}`,
-            author: video.item?.mask?.avatar.text,
-            authorFace: video.item?.mask?.avatar.cover || video.item?.avatar?.cover,
-            followed: video.item?.bottom_rcmd_reason === '已关注' || video.item?.bottom_rcmd_reason === '已關注',
-            mid: video.item?.mask?.avatar.up_id,
+            author: {
+              name: video.item?.mask?.avatar.text,
+              authorFace: video.item?.mask?.avatar.cover || video.item?.avatar?.cover,
+              followed: video.item?.bottom_rcmd_reason === '已关注' || video.item?.bottom_rcmd_reason === '已關注',
+              mid: video.item?.mask?.avatar.up_id,
+            },
             capsuleText: video.item?.desc?.split('·')[1],
             bvid: video.item.bvid,
             viewStr: video.item.cover_left_text_1,
@@ -406,4 +405,15 @@ defineExpose({ initData })
 </template>
 
 <style lang="scss" scoped>
+.grid-adaptive {
+  --uno: "grid 2xl:cols-5 xl:cols-4 lg:cols-3 md:cols-2 sm:cols-1 cols-1 gap-5";
+}
+
+.grid-two-columns {
+  --uno: "grid cols-1 xl:cols-2 gap-4";
+}
+
+.grid-one-column {
+  --uno: "grid cols-1 gap-4";
+}
 </style>

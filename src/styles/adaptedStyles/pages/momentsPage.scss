@@ -24,6 +24,11 @@
     padding-right: 20px;
   }
 
+  .fixed-author-header {
+    background-color: var(--bew-elevated);
+    backdrop-filter: var(--bew-filter-glass-1);
+  }
+
   :not(fjlsfd) {
     .dyn-orig-author__following.following-icon:before,
     .bili-dyn-live-users__more:hover:after,
@@ -53,18 +58,19 @@
       background-color: var(--bew-theme-color-10);
     }
 
-    .bili-dyn-publishing__action:not(.disabled):hover {
+    .bili-topic-new__default__create__icon,
+    .bili-pics-uploader__add:hover:after,
+    .bili-pics-uploader__add:hover:before,
+    .bili-dyn-publishing__action.toarticle:hover {
+      background-color: var(--bew-theme-color-20);
+    }
+
+    .bili-dyn-publishing__action.launcher:not(.disabled):hover {
       background-color: var(--bew-theme-color-80);
     }
 
     .bili-pics-uploader__add:hover {
       border-color: var(--bew-theme-color-40);
-    }
-
-    .bili-topic-new__default__create__icon,
-    .bili-pics-uploader__add:hover:after,
-    .bili-pics-uploader__add:hover:before {
-      background-color: var(--bew-theme-color-20);
     }
 
     .side-toolbar__action.is-active svg path,
@@ -79,13 +85,17 @@
     }
 
     .bili-dyn-home--member,
-    #app {
-      --bg1: var(--bew-content-solid);
-      --bg2: var(--bew-bg);
+    #app,
+    .opus-detail {
+      * {
+        --bg1: var(--bew-content-solid);
+        --bg2: var(--bew-fill-1);
+      }
     }
 
     .fixed-author-header__author__name,
-    .dyn-blocked-mask.feed-item .dyn-blocked-mask__msg-title {
+    .dyn-blocked-mask.feed-item .dyn-blocked-mask__msg-title,
+    .bili-dyn-publishing__title__input {
       color: var(--bew-text-1);
     }
 
@@ -106,8 +116,9 @@
       box-shadow: inset 0 -0.5px 0 0 var(--bew-border-color);
     }
 
-    .side-toolbar__btn.backtop span:before {
-      filter: invert(1);
+    .side-toolbar__btn.backtop span:before,
+    .opus-formula-node {
+      filter: invert(1) hue-rotate(180deg);
     }
 
     .bili-button.primary.plain,
@@ -199,7 +210,7 @@
     border-color: var(--bew-theme-color);
   }
 
-  .bili-dyn-publishing__action,
+  .bili-dyn-publishing__action.launcher,
   .dyn-goods__one__action button,
   .dyn-reserve__action button,
   .dyn-additional-common__action button {
@@ -348,7 +359,7 @@
       color: var(--bew-border-color);
     }
 
-    .bili-dyn-title__text {
+    .bili-dyn-title__text:not(:hover) {
       color: var(--bew-text-1) !important;
     }
 

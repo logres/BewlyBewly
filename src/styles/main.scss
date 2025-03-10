@@ -1,11 +1,15 @@
 * {
   outline-color: var(--bew-theme-color-80);
+  font-feature-settings: "tnum";
   // outline-width: 2px;
   // outline-offset: 2px;
 }
 
-.bewly-design.dark * {
-  color-scheme: dark;
+.dark {
+  input,
+  textarea {
+    color-scheme: dark;
+  }
 }
 
 ::-webkit-scrollbar {
@@ -30,34 +34,29 @@ html.bewly-design > ::-webkit-scrollbar-track {
   background: transparent;
 }
 
-::selection {
-  background: var(--bew-fill-3) !important;
-  color: revert !important;
-}
-
 html.bewly-design,
 .bewly-design body {
   // font-size: 14px !important;
   min-width: unset !important;
   filter: none !important;
   color: var(--bew-text-1);
-  line-height: unset;
   background-image: none;
 }
 
 .dark.bewly-design body,
 html.dark.bewly-design {
-  background-color: var(--bew-bg);
+  background-color: var(--bew-bg) !important;
+}
+
+.bewly-design *::selection,
+.bewly-wrapper *::selection {
+  background: color-mix(in oklab, var(--bew-theme-color-60), var(--bew-bg, white) 20%) !important;
+  color: revert !important;
 }
 
 .bewly-design {
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    --uno: "color-$bew-text-1";
+  input {
+    background-color: transparent;
   }
 }
 
@@ -129,6 +128,14 @@ img {
       box-shadow:
         0 0 0 1px var(--bew-border-color),
         0 -1.4px 0 0 var(--bew-fill-2);
+    }
+  }
+
+  a.link {
+    color: var(--bew-theme-color);
+
+    &:hover {
+      color: var(--bew-theme-color-80);
     }
   }
 }

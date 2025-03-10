@@ -1,17 +1,16 @@
 <script setup lang="ts">
-import { useMouseInElement } from '@vueuse/core'
+import { onKeyStroke, useMouseInElement } from '@vueuse/core'
 import type { Ref, UnwrapNestedRefs } from 'vue'
 
-import { useApiClient } from '~/composables/api'
 import { useBewlyApp } from '~/composables/useAppProvider'
 import { useDelayedHover } from '~/composables/useDelayedHover'
 import { OVERLAY_SCROLL_BAR_SCROLL, TOP_BAR_VISIBILITY_CHANGE } from '~/constants/globalEvents'
 import { AppPage } from '~/enums/appEnums'
 import { settings } from '~/logic'
+import api from '~/utils/api'
 import { getUserID, isHomePage } from '~/utils/main'
 import emitter from '~/utils/mitt'
 
-import ALink from './components/ALink.vue'
 import ChannelsPop from './components/ChannelsPop.vue'
 import FavoritesPop from './components/FavoritesPop.vue'
 import HistoryPop from './components/HistoryPop.vue'
@@ -42,8 +41,6 @@ const userInfo = reactive<UserInfo | NonNullable<unknown>>({}) as UnwrapNestedRe
 const hideTopBar = ref<boolean>(false)
 const headerTarget = ref(null)
 const { isOutside: isOutsideTopBar } = useMouseInElement(headerTarget)
-
-const api = useApiClient()
 
 // initially, assume the user is logged in cuz data retrieval is slow, which may show the login
 // button even after login. if the user is not logged in, the login button will show up later
@@ -99,9 +96,16 @@ const isTopBarFixed = computed(() => {
   return false
 })
 
-const showTopBar = computed(() => {
-  const isCreativeCenter = /https?:\/\/member.bilibili.com\/platform.*/.test(location.href)
-  if (settings.value.showTopBar && !isCreativeCenter)
+const showTopBar = computed((): boolean => {
+  if (
+    // Creative center page
+    /https?:\/\/member.bilibili.com\/platform.*/.test(location.href)
+    // https://github.com/BewlyBewly/BewlyBewly/issues/1276
+    || /https?:\/\/(?:www\.)?bilibili\.com\/read\/(?:preview|pcpreview).*/.test(location.href)
+  ) {
+    return false
+  }
+  if (settings.value.showTopBar)
     return true
   return false
 })
@@ -288,20 +292,21 @@ watch(activatedPage, () => {
   toggleTopBarVisible(true)
 })
 
-onMounted(async () => {
+onMounted(() => {
   initData()
-  await nextTick()
-  toggleTopBarVisible(true)
+  nextTick(() => {
+    toggleTopBarVisible(true)
 
-  emitter.off(OVERLAY_SCROLL_BAR_SCROLL)
-  if (isHomePage() && !settings.value.useOriginalBilibiliHomepage) {
-    emitter.on(OVERLAY_SCROLL_BAR_SCROLL, () => {
-      handleScroll()
-    })
-  }
-  else {
-    window.addEventListener('scroll', handleScroll)
-  }
+    emitter.off(OVERLAY_SCROLL_BAR_SCROLL)
+    if (isHomePage() && !settings.value.useOriginalBilibiliHomepage) {
+      emitter.on(OVERLAY_SCROLL_BAR_SCROLL, () => {
+        handleScroll()
+      })
+    }
+    else {
+      window.addEventListener('scroll', handleScroll)
+    }
+  })
 })
 
 onUnmounted(() => {
@@ -425,6 +430,11 @@ async function getTopBarNewMomentsCount() {
 }
 // #endregion
 
+// https://github.com/BewlyBewly/BewlyBewly/issues/1220
+onKeyStroke('/', () => {
+  toggleTopBarVisible(true)
+})
+
 function toggleTopBarVisible(visible: boolean) {
   hideTopBar.value = !visible
   emitter.emit(TOP_BAR_VISIBILITY_CHANGE, visible)
@@ -485,6 +495,7 @@ defineExpose({
           >
             <a
               ref="logo" href="//www.bilibili.com"
+              target="_top"
               class="group logo"
               :class="{ activated: popupVisible.channels }"
               style="backdrop-filter: var(--bew-filter-glass-1);"
@@ -522,8 +533,8 @@ defineExpose({
             <SearchBar
               v-if="showSearchBar"
               style="
-              --b-search-bar-color: var(--bew-elevated);
-              --b-search-bar-hover: var(--bew-elevated-hover);
+              --b-search-bar-normal-color: var(--bew-elevated);
+              --b-search-bar-hover-color: var(--bew-elevated-hover);
             "
             />
           </Transition>
@@ -544,6 +555,7 @@ defineExpose({
             <ALink
               ref="avatarImg"
               :href="`https://space.bilibili.com/${mid}`"
+              type="topBar"
               class="avatar-img"
               :class="{ hover: popupVisible.userPanel }"
               :style="{
@@ -649,6 +661,7 @@ defineExpose({
                   <ALink
                     href="https://message.bilibili.com"
                     :title="$t('topbar.notifications')"
+                    type="topBar"
                   >
                     <div i-tabler:bell />
                   </ALink>
@@ -682,6 +695,7 @@ defineExpose({
                   <ALink
                     href="https://t.bilibili.com"
                     :title="$t('topbar.moments')"
+                    type="topBar"
                   >
                     <div i-tabler:windmill />
                   </ALink>
@@ -700,6 +714,7 @@ defineExpose({
                   <ALink
                     :href="`https://space.bilibili.com/${mid}/favlist`"
                     :title="$t('topbar.favorites')"
+                    type="topBar"
                   >
                     <div i-mingcute:star-line />
                   </ALink>
@@ -725,6 +740,7 @@ defineExpose({
                   <ALink
                     href="https://www.bilibili.com/account/history"
                     :title="$t('topbar.history')"
+                    type="topBar"
                   >
                     <div i-mingcute:time-line />
                   </ALink>
@@ -747,6 +763,7 @@ defineExpose({
                   <ALink
                     href="https://www.bilibili.com/watchlater/#/list"
                     :title="$t('topbar.watch_later')"
+                    type="topBar"
                   >
                     <div i-mingcute:carplay-line />
                   </ALink>

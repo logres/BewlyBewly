@@ -1,21 +1,30 @@
 .page-fade-enter-active,
 .page-fade-leave-active {
-  --uno: "transition-opacity duration-500 transform-gpu";
+  --uno: "transition-opacity duration-300 transform-gpu";
 }
 .page-fade-enter-from,
 .page-fade-leave-to {
   --uno: "opacity-0";
 }
 .page-fade-leave-to {
-  --uno: "hidden";
+  --uno: "!hidden";
 }
 
 .fade-enter-active,
 .fade-leave-active {
-  --uno: "transition-opacity duration-500";
+  --uno: "transition-opacity duration-300";
 }
 .fade-enter-from,
 .fade-leave-to {
+  --uno: "opacity-0";
+}
+
+.slide-fade-enter-active,
+.slide-fade-leave-active {
+  --uno: "opacity-100 transition-all duration-500";
+}
+.slide-fade-enter,
+.slide-fade-leave-to {
   --uno: "opacity-0";
 }
 

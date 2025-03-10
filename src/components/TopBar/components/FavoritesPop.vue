@@ -1,17 +1,13 @@
 <script setup lang="ts">
 import type { Ref } from 'vue'
-import { onMounted, reactive, ref, watch } from 'vue'
 
 import Empty from '~/components/Empty.vue'
 import Loading from '~/components/Loading.vue'
-import { useApiClient } from '~/composables/api'
+import api from '~/utils/api'
 import { calcCurrentTime } from '~/utils/dataFormatter'
 import { getUserID, removeHttpFromUrl, scrollToTop } from '~/utils/main'
 
 import type { FavoriteCategory, FavoriteResource } from '../types'
-import ALink from './ALink.vue'
-
-const api = useApiClient()
 
 const favoriteCategories = reactive<Array<FavoriteCategory>>([])
 const favoriteResources = reactive<Array<FavoriteResource>>([])
@@ -28,7 +24,7 @@ const favoriteVideosWrap = ref<HTMLElement>() as Ref<HTMLElement>
 const viewAllUrl = computed((): string => {
   return `//space.bilibili.com/${getUserID()}/favlist?fid=${
     activatedMediaId.value
-  }`
+  }&ftype=create`
 })
 
 const playAllUrl = computed((): string => {
@@ -47,7 +43,11 @@ watch(activatedMediaId, (newVal: number, oldVal: number) => {
   getFavoriteResources()
 })
 
-onMounted(async () => {
+onMounted(() => {
+  initData()
+})
+
+async function initData() {
   await getFavoriteCategories()
   activatedMediaId.value = favoriteCategories[0].id
   activatedFavoriteTitle.value = favoriteCategories[0].title
@@ -70,7 +70,7 @@ onMounted(async () => {
       }
     })
   }
-})
+}
 
 async function getFavoriteCategories() {
   await api.favorite.getFavoriteCategories({
@@ -139,9 +139,9 @@ defineExpose({
 <template>
   <div
     style="backdrop-filter: var(--bew-filter-glass-1);"
+    h="[calc(100vh-100px)]" max-h-500px important-overflow-y-overlay
     bg="$bew-elevated"
     w="450px"
-    h="430px"
     rounded="$bew-radius"
     pos="relative"
     shadow="[var(--bew-shadow-edge-glow-1),var(--bew-shadow-3)]"
@@ -149,15 +149,12 @@ defineExpose({
   >
     <!-- top bar -->
     <header
-      style="backdrop-filter: var(--bew-filter-glass-1)"
       flex="~" items-center justify-between
       p="x-6"
-      pos="fixed top-0 left-0"
+      pos="sticky top-0 left-0"
       w="full"
       h-50px
-      bg="$bew-content"
       z="2"
-      un-border="!rounded-t-$bew-radius"
     >
       <h3 cursor="pointer" font-600 @click="scrollToTop(favoriteVideosWrap)">
         {{ activatedFavoriteTitle }}
@@ -165,13 +162,15 @@ defineExpose({
 
       <div flex="~ gap-4">
         <ALink
-          :href="playAllUrl" rel="noopener noreferrer"
+          :href="playAllUrl"
+          type="topBar"
           flex="~" items="center"
         >
           <span text="sm">{{ $t('common.play_all') }}</span>
         </ALink>
         <ALink
-          :href="viewAllUrl" rel="noopener noreferrer"
+          :href="viewAllUrl"
+          type="topBar"
           flex="~" items="center"
         >
           <span text="sm">{{ $t('common.view_all') }}</span>
@@ -179,9 +178,10 @@ defineExpose({
       </div>
     </header>
 
-    <main flex="~" overflow-hidden rounded="$bew-radius">
+    <main flex="~" h="[calc(100%-50px)]" rounded="$bew-radius">
       <aside
-        w="140px" h="430px" overflow="y-auto" rounded="l-$bew-radius"
+        pos="sticky top-50px left-0"
+        w="140px" h-full overflow="y-auto"
         flex="shrink-0" bg="$bew-fill-1"
       >
         <ul grid="~ cols-1">
@@ -190,7 +190,6 @@ defineExpose({
             :key="item.id"
             :class="activatedMediaId === item.id ? 'activated-category' : ''"
             p="y-2 x-6"
-            first:m="t-[50px]"
             cursor="pointer"
             transition="~ duration-300"
             @click="changeCategory(item)"
@@ -204,10 +203,10 @@ defineExpose({
       <div
         ref="favoriteVideosWrap"
         flex="~ col gap-2 1"
-        h="430px"
-        overflow="y-scroll"
+        overflow="y-auto"
         p="x-4"
         pos="relative"
+        h-full
       >
         <!-- loading -->
         <Loading
@@ -230,17 +229,12 @@ defineExpose({
         />
 
         <!-- favorites -->
-
-        <!-- Use a transparent `div` instead of `margin-top` to prevent the list item bouncing problem -->
-        <!-- https://github.com/BewlyBewly/BewlyBewly/pull/889#issue-2394127922 -->
-        <div v-if="!isLoading && favoriteResources.length > 0" min-h="50px" />
-
         <TransitionGroup name="list">
           <ALink
             v-for="item in favoriteResources"
             :key="item.id"
             :href="isMusic(item) ? `https://www.bilibili.com/audio/au${item.id}` : `//www.bilibili.com/video/${item.bvid}`"
-            rel="noopener noreferrer"
+            type="topBar"
             hover:bg="$bew-fill-2"
             rounded="$bew-radius"
             m="last:b-4" p="2"

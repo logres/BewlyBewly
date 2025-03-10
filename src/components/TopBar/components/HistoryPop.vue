@@ -6,16 +6,13 @@ import { useI18n } from 'vue-i18n'
 import Empty from '~/components/Empty.vue'
 import Loading from '~/components/Loading.vue'
 import Progress from '~/components/Progress.vue'
-import { useApiClient } from '~/composables/api'
 import type { HistoryResult, List as HistoryItem } from '~/models/history/history'
 import { Business } from '~/models/history/history'
+import api from '~/utils/api'
 import { calcCurrentTime } from '~/utils/dataFormatter'
-import { removeHttpFromUrl, scrollToTop } from '~/utils/main'
-
-import ALink from './ALink.vue'
+import { getCSRF, removeHttpFromUrl, scrollToTop } from '~/utils/main'
 
 const { t } = useI18n()
-const api = useApiClient()
 const historys = reactive<Array<HistoryItem>>([])
 const historyTabs = computed(() => [
   {
@@ -103,6 +100,8 @@ function onClickTab(tabId: number) {
   if (isLoading.value)
     return
 
+  noMoreContent.value = false
+
   activatedTab.value = tabId
   historyTabs.value.forEach((tab) => {
     tab.isSelected = tab.id === tabId
@@ -162,17 +161,28 @@ function getHistoryList(type: Business, view_at = 0 as number) {
         if (res.data.list.length < 20) {
           noMoreContent.value = true
         }
-
-        noMoreContent.value = false
       }
       isLoading.value = false
+    })
+}
+
+function deleteHistoryItem(index: number, historyItem: HistoryItem) {
+  api.history.deleteHistoryItem({
+    kid: `${historyItem.history.business}_${historyItem.history.oid}`,
+    csrf: getCSRF(),
+  })
+    .then((res) => {
+      if (res.code === 0)
+        historys.splice(index, 1)
     })
 }
 </script>
 
 <template>
   <div
+    ref="historysWrap"
     style="backdrop-filter: var(--bew-filter-glass-1);"
+    h="[calc(100vh-100px)]" max-h-500px important-overflow-y-overlay
     bg="$bew-elevated"
     w="380px"
     rounded="$bew-radius"
@@ -186,11 +196,10 @@ function getHistoryList(type: Business, view_at = 0 as number) {
       flex="~"
       justify="between"
       p="y-4 x-6"
-      pos="fixed top-0 left-0"
+      pos="sticky top-0 left-0"
       w="full"
       bg="$bew-elevated"
       z="2"
-      border="!rounded-t-$bew-radius"
     >
       <div flex="~">
         <div
@@ -207,7 +216,8 @@ function getHistoryList(type: Business, view_at = 0 as number) {
         </div>
       </div>
       <ALink
-        href="https://www.bilibili.com/account/history" rel="noopener noreferrer"
+        href="https://www.bilibili.com/history"
+        type="topBar"
         flex="~ items-center"
       >
         <span text="sm">{{ $t('common.view_all') }}</span>
@@ -215,195 +225,206 @@ function getHistoryList(type: Business, view_at = 0 as number) {
     </header>
 
     <!-- historys wrapper -->
-    <main overflow-hidden rounded="$bew-radius">
-      <div
-        ref="historysWrap"
-        flex="~ col gap-2"
-        h="430px"
-        overflow="y-scroll"
-        p="x-4"
-      >
-        <!-- loading -->
-        <Loading
-          v-if="isLoading && historys.length === 0"
-          h="full"
-          flex="~ items-center"
-        />
+    <main
+      overflow-hidden rounded="$bew-radius"
+      flex="~ col gap-2"
+      p="x-4"
+    >
+      <!-- loading -->
+      <Loading
+        v-if="isLoading && historys.length === 0"
+        h="full"
+        flex="~ items-center"
+      />
 
-        <!-- empty -->
-        <Empty
-          v-if="!isLoading && historys.length === 0"
-          pos="absolute top-0 left-0"
-          bg="$bew-content"
-          z="0" w="full" h="full"
-          flex="~ items-center"
+      <!-- empty -->
+      <Empty
+        v-if="!isLoading && historys.length === 0"
+        pos="absolute top-0 left-0"
+        bg="$bew-content"
+        z="0" w="full" h="full"
+        flex="~ items-center"
+        rounded="$bew-radius"
+      />
+
+      <!-- historys -->
+      <TransitionGroup name="list">
+        <ALink
+          v-for="(historyItem, index) in historys"
+          :key="historyItem.kid"
+          :href="getHistoryUrl(historyItem)"
+          class="group"
+          type="topBar"
+          m="last:b-4" p="2"
           rounded="$bew-radius"
-        />
-
-        <!-- historys -->
-
-        <!-- Use a transparent `div` instead of `margin-top` to prevent the list item bouncing problem -->
-        <!-- https://github.com/BewlyBewly/BewlyBewly/pull/889#issue-2394127922 -->
-        <div v-if="!isLoading && historys.length > 0" min-h="50px" />
-
-        <TransitionGroup name="list">
-          <ALink
-            v-for="historyItem in historys"
-            :key="historyItem.kid"
-            :href="getHistoryUrl(historyItem)" rel="noopener noreferrer"
-            m="last:b-4" p="2"
-            rounded="$bew-radius"
-            hover:bg="$bew-fill-2"
-            duration-300
-          >
-            <section flex="~ gap-4 item-start">
-              <!-- Video cover, live cover, ariticle cover -->
+          hover:bg="$bew-fill-2"
+          duration-300
+        >
+          <section flex="~ gap-4 item-start">
+            <!-- Video cover, live cover, ariticle cover -->
+            <div
+              bg="$bew-skeleton"
+              pos="relative"
+              w="150px"
+              flex="shrink-0"
+              border="rounded-$bew-radius-half"
+              overflow="hidden"
+            >
+              <!-- Delete button -->
               <div
-                bg="$bew-skeleton"
-                w="150px"
-                flex="shrink-0"
-                border="rounded-$bew-radius-half"
-                overflow="hidden"
+                class="group-hover:opacity-100 opacity-0"
+                pos="absolute top-0 right-0" z-1 w-24px h-24px
+                bg="black opacity-60 hover:$bew-error-color"
+                grid="~ place-items-center"
+                m="1"
+                text="white xs"
+                duration-300
+                border="rounded-full"
+                @click.stop.prevent="deleteHistoryItem(index, historyItem)"
               >
-                <!-- Video -->
-                <template v-if="activatedTab === 0">
-                  <div pos="relative">
-                    <img
-                      w="150px" h-full
-                      class="aspect-video"
-                      :src="`${removeHttpFromUrl(
-                        historyItem.cover,
-                      )}@256w_144h_1c`"
-                      :alt="historyItem.title"
-                      object-cover
-                    >
-                    <div
-                      pos="absolute bottom-0 right-0"
-                      bg="black opacity-60"
-                      m="1"
-                      p="x-2 y-1"
-                      text="white xs"
-                      border="rounded-full"
-                    >
-                      <!--  When progress = -1 means that the user watched the full video -->
-                      {{
-                        `${
-                          historyItem.progress === -1
-                            ? calcCurrentTime(historyItem.duration)
-                            : calcCurrentTime(historyItem.progress)
-                        } /
+                <i i-mingcute:close-line />
+              </div>
+
+              <!-- Video -->
+              <template v-if="activatedTab === 0">
+                <div pos="relative">
+                  <img
+                    w="150px" h-full
+                    class="aspect-video"
+                    :src="`${removeHttpFromUrl(
+                      historyItem.cover,
+                    )}@256w_144h_1c`"
+                    :alt="historyItem.title"
+                    object-cover
+                  >
+                  <div
+                    pos="absolute bottom-0 right-0"
+                    bg="black opacity-60"
+                    m="1"
+                    p="x-2 y-1"
+                    text="white xs"
+                    border="rounded-full"
+                  >
+                    <!--  When progress = -1 means that the user watched the full video -->
+                    {{
+                      `${
+                        historyItem.progress === -1
+                          ? calcCurrentTime(historyItem.duration)
+                          : calcCurrentTime(historyItem.progress)
+                      } /
                     ${calcCurrentTime(historyItem.duration)}`
-                      }}
-                    </div>
+                    }}
                   </div>
-                  <Progress
-                    :percentage="
-                      (historyItem.progress / historyItem.duration) * 100
-                    "
-                  />
-                </template>
+                </div>
+                <Progress
+                  :percentage="
+                    (historyItem.progress / historyItem.duration) * 100
+                  "
+                />
+              </template>
 
-                <!-- Live -->
-                <template v-else-if="activatedTab === 1">
-                  <div pos="relative">
-                    <img
-                      w="150px"
-                      class="aspect-video"
-                      :src="`${removeHttpFromUrl(
-                        historyItem.cover,
-                      )}@256w_144h_1c`"
-                      :alt="historyItem.title"
-                      bg="contain"
-                    >
-                    <div
-                      v-if="historyItem.live_status === 1"
-                      pos="absolute top-0 left-0"
-                      bg="$bew-error-color"
-                      text="xs white"
-                      p="x-2 y-1"
-                      m="1"
-                      rounded="$bew-radius-half"
-                      font="semibold"
-                    >
-                      LIVE
-                    </div>
-                    <div
-                      v-else
-                      pos="absolute top-0 left-0"
-                      bg="black opacity-60"
-                      text="xs white"
-                      p="x-2 y-1"
-                      m="1"
-                      rounded="$bew-radius-half"
-                    >
-                      OFFLINE
-                    </div>
-                  </div>
-                </template>
-
-                <!-- Article -->
-                <div v-else-if="activatedTab === 2">
+              <!-- Live -->
+              <template v-else-if="activatedTab === 1">
+                <div pos="relative">
                   <img
                     w="150px"
                     class="aspect-video"
-                    :src="`${
-                      Array.isArray(historyItem.covers)
-                        ? historyItem.covers[0]
-                        : ''
-                    }@256w_144h_1c`"
-                    object-cover
+                    :src="`${removeHttpFromUrl(
+                      historyItem.cover,
+                    )}@256w_144h_1c`"
                     :alt="historyItem.title"
                     bg="contain"
                   >
-                </div>
-              </div>
-
-              <!-- Description -->
-              <div>
-                <h3
-                  class="keep-two-lines"
-                  overflow="hidden"
-                  text="ellipsis"
-                  break-anywhere
-                >
-                  {{ historyItem.title }}
-                </h3>
-                <div text="$bew-text-2 sm" m="t-4" flex="~" align="items-center">
-                  <ALink
-                    :href="`https://space.bilibili.com/${historyItem.author_mid}`"
-                    rel="noopener noreferrer"
-                  >
-                    {{ historyItem.author_name }}
-                  </ALink>
-                  <span
+                  <div
                     v-if="historyItem.live_status === 1"
-                    text="$bew-theme-color"
-                    flex
-                    items-center
-                    gap-1
-                    m="l-2"
-                  ><div i-tabler:live-photo />
+                    pos="absolute top-0 left-0"
+                    bg="$bew-theme-color"
+                    text="xs white"
+                    p="x-2 y-1"
+                    m="1"
+                    rounded-full
+                    font="semibold"
+                  >
                     LIVE
-                  </span>
+                    <i i-svg-spinners:pulse-3 align-middle mt--0.2em />
+                  </div>
+                  <div
+                    v-else
+                    pos="absolute top-0 left-0"
+                    bg="black opacity-60"
+                    text="xs white"
+                    p="x-2 y-1"
+                    m="1"
+                    rounded="full"
+                  >
+                    OFFLINE
+                  </div>
                 </div>
-                <p text="$bew-text-2 sm">
-                  {{
-                    useDateFormat(
-                      historyItem.view_at * 1000,
-                      'YYYY-MM-DD HH:mm:ss',
-                    ).value
-                  }}
-                </p>
-              </div>
-            </section>
-          </ALink>
-        </TransitionGroup>
+              </template>
 
-        <!-- loading -->
-        <Transition name="fade">
-          <Loading v-if="isLoading && historys.length !== 0" m="-t-4" />
-        </Transition>
-      </div>
+              <!-- Article -->
+              <div v-else-if="activatedTab === 2">
+                <img
+                  w="150px"
+                  class="aspect-video"
+                  :src="`${
+                    Array.isArray(historyItem.covers)
+                      ? historyItem.covers[0]
+                      : ''
+                  }@256w_144h_1c`"
+                  object-cover
+                  :alt="historyItem.title"
+                  bg="contain"
+                >
+              </div>
+            </div>
+
+            <!-- Description -->
+            <div>
+              <h3
+                class="keep-two-lines"
+                overflow="hidden"
+                text="ellipsis"
+                break-anywhere
+              >
+                {{ historyItem.title }}
+              </h3>
+              <div text="$bew-text-2 sm" m="t-4" flex="~" align="items-center">
+                <ALink
+                  :href="`https://space.bilibili.com/${historyItem.author_mid}`"
+                  type="topBar"
+                >
+                  {{ historyItem.author_name }}
+                </ALink>
+                <span
+                  v-if="historyItem.live_status === 1"
+                  text="$bew-theme-color"
+                  flex
+                  items-center
+                  gap-1
+                  m="l-2"
+                >
+                  LIVE
+                  <i i-svg-spinners:pulse-3 align-middle mt--0.2em />
+                </span>
+              </div>
+              <p text="$bew-text-2 sm">
+                {{
+                  useDateFormat(
+                    historyItem.view_at * 1000,
+                    'YYYY-MM-DD HH:mm:ss',
+                  ).value
+                }}
+              </p>
+            </div>
+          </section>
+        </ALink>
+      </TransitionGroup>
+
+      <!-- loading -->
+      <Transition name="fade">
+        <Loading v-if="isLoading && historys.length !== 0" m="-t-4" />
+      </Transition>
     </main>
   </div>
 </template>

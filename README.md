@@ -1,6 +1,6 @@
 # BewlyBewly
 
-English | [官话 - 简体中文](README-cmn_CN.md) | [官話 - 正體中文](README-cmn_TW.md) | [廣東話](README-jyut.md)
+English | [官话 - 简体中文](README-cmn_CN.md) | [官話 - 繁體中文](README-cmn_TW.md) | [廣東話](README-jyut.md)
 
 <p align="center" style="margin-bottom: 0px !important;">
 <img width="300" alt="BewlyBewly icon" src="https://cdn.jsdelivr.net/gh/BewlyBewly/Imgs/logos/bewlybewly-vtuber-logo.png"><br/>
@@ -13,11 +13,24 @@ English | [官话 - 简体中文](README-cmn_CN.md) | [官話 - 正體中文](RE
 
 ## 👋 Introduction
 
-> [!NOTE]
+> [!IMPORTANT]
 > BewlyBewly mainly focuses on page adjustments and optimization rather than improving functionally and efficiency.
 >
 > The dark mode will only be adapted to commonly used pages due to its efficiency and maintenance difficulty, while less
 > frequently used pages will not to be adapted.
+
+> [!CAUTION]
+> [BLBewly](https://apps.apple.com/us/app/blbewly/id6742200021) is a free BewlyBewly extension on Safari. We thank [𝗦𝘁𝗲𝘃𝗲 𝕏](https://x.com/st7evechou) for their help with the free publication of the app to Safari.
+> However, issues encountered with the Safari version are outside of our maintenance scope,
+> and we are not considering Safari maintenance.
+
+> [!CAUTION]
+> If you are installing this extension, your browser will probably say that it can read your browser history.
+>
+> This is because BewlyBewly uses the ["tabs" permission](https://developer.chrome.com/docs/extensions/reference/api/tabs), which can also be used to read each tab, allowing it to know the browsing history, but it is not utilized here.
+>
+> **Some browsers will mention the worst-case scenario and the highest risks, ensuring your safety after installation.**
+> Additionally, this project is open source, so you can see what exactly what it does.
 
 BewlyBewly is a browser extension for BiliBili that aims to enhance the user experience by redesigning the BiliBili UI.
 The design is inspired by YouTube, Vision OS, and iOS, resulting in a more visually appealing and user-friendly interface.
@@ -28,7 +41,7 @@ Without this template, it may not be possible to develop this project.
 
 ### Online Installation
 
-> [!Caution]
+> [!TIP]
 > Even in the Edge browser, we strongly recommend you install it in the Chrome web store.
 > In terms of review speed, the Chrome web store is faster than Edge Add-ons.
 >

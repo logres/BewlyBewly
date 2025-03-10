@@ -60,6 +60,7 @@ settings:
   menu_general: 一般
   menu_desktop_and_dock: 桌面同 Dock
   menu_appearance: 版面
+  menu_bewly_pages: BewlyBewly 頁面
   menu_home: 主頁
   menu_search_page: 搵嘢頁
   menu_compatibility: 相容性
@@ -79,10 +80,11 @@ settings:
   group_wallpaper: 背景圖片
   group_logo: LOGO
   group_search_bar: 搜尋欄
-  group_recommendation_mode: 推介模式
-  group_recommendation_filters: 推介篩選
+  group_recommendation_mode: 「估你心水」推介模式
+  group_recommendation_filters: 「估你心水」過濾
   group_recommendation_filters_desc: |
     限制嘅數值唔好設太大，唔係嘅話會影響載入時間！
+  group_following: 跟緊啲人
   group_search_page_mode: 搵嘢頁模式
   group_home_tabs: 主頁分頁欄
 
@@ -107,47 +109,72 @@ settings:
   select_language_opt:
     english: 英文
     mandarin_cn: 官话 - 简体中文
-    mandarin_tw: 官話 - 正體中文
+    mandarin_tw: 官話 - 繁體中文
     jyut: 廣東話
   customize_font: 自訂字型
+  customize_font_opt:
+    default: Bilibili 預設
+    recommend: 推介
+    custom: 自訂
   customize_font_desc: |-
-    對於舊字形嘅用戶，我哋推介 <a href="https://github.com/GuiWonder/Shanggu" target="_blank">Shanggu Fonts (尚古字型)</a> 同 <a href="https://github.com/ayaka14732/FanWunHak" target="_blank">Fan Wun Hak (繁媛黑體)</a>。
-    呢啲字型仲可以將簡體中文轉做繁體/正體中文。
+    對於舊字形嘅用戶，我哋推介 <a class="link" href="https://github.com/GuiWonder/Shanggu" target="_blank">Shanggu Fonts (尚古字型)</a> 同 <a class="link" href="https://github.com/ayaka14732/FanWunHak" target="_blank">Fan Wun Hak (繁媛黑體)</a>。
+    呢啲字型仲可以將簡體中文轉做繁體/繁體中文。
+  override_danmaku_font: 覆蓋彈幕字型
+  override_danmaku_font_desc: >
+    設定彈幕字型做你嘅自訂字型覆蓋預設值。影片播放器之後唔得改彈幕字型。
   remove_the_indent_from_chinese_punctuation: 移除中文標點符號嘅縮排
   remove_the_indent_from_chinese_punctuation_desc: >
     Bilibili 預設會專登執吓中文標點符號，令到佢可以左對齊。如果你係用緊自訂字字型，最好係移除縮排。
 
-  video_card_link_opening_behavior: 影片同番劇卡片連結開啓行爲
-  video_card_link_opening_behavior_opt:
-    drawer: 喺櫃桶度開啓
-    new_tab: 新開分頁
-  enable_video_preview: 使用影片預覽功能（若然得嘅話）
-  enable_video_ctrl_bar_on_video_card: 喺影片卡片上顯示影片控制欄
-  hover_video_card_delayed: 滑鼠停留喺影片卡片嗰陣遲啲進行影片預覽
-  block_ads: 封鎖廣告
   disable_frosted_glass: 閂咗毛玻璃效果
   reduce_frosted_glass_blur: 降低毛玻璃模糊強度
+  disable_shadow: 閂咗陰影
 
-  # Desktop and Dock
-  use_old_top_bar: 用返舊版頂部欄
-  top_bar_link_opening_behavior: 頂部欄連結開啓行爲
-  top_bar_link_opening_behavior_opt:
+  link_opening_behavior_opt:
     current_tab: 目前分頁
     current_tab_if_not_homepage: 唔喺主頁就喺目前分頁度開啓，否則開新嘅分頁
     new_tab: 新開分頁
+    drawer: 喺櫃桶度開啓
+  top_bar_link_opening_behavior: 頂部欄連結開啓行爲
+  video_card_link_opening_behavior: 影片同番劇卡片連結開啓行爲
+  search_bar_link_opening_behavior: 搜尋欄連結開啓行爲
+  close_drawer_without_pressing_esc_again: 閂櫃桶嗰陣唔使再撳多次 <kbd>Esc</kbd>
+
+  block_ads: 封鎖廣告
+  block_top_search_page_ads: 封鎖 Bilibili 搵嘢頁上方的廣告
+  block_top_search_page_ads_desc: >
+    有時喺搵嘢結果上高嘅廣告，其實係年結報告抑或週年報告嚟㗎。若然你唔想佢哋唔覺意俾人刪咗，就請你閂咗呢個選項啦。
+
+  enable_video_preview: 使用影片預覽功能（若然得嘅話）
+  enable_video_ctrl_bar_on_video_card: 喺影片卡片上顯示影片控制欄
+  hover_video_card_delayed: 滑鼠停留喺影片卡片嗰陣遲啲進行影片預覽
+
+  # Desktop and Dock
+  use_old_top_bar: 用返舊版頂部欄
   auto_hide_top_bar: 自動收埋頂部欄
-  top_bar_icon_badges: 圖示邊位標記
+  show_top_bar_theme_color_gradient: 喺頂部欄顯示主題色漸變（淨係喺深色模式下有效）
+  show_bewly_or_bili_top_bar_switcher: 顯示 BewlyBewly/Bilibili 頂部欄切換掣
+  show_bewly_or_bili_page_switcher: 顯示 BewlyBewly/Bilibili 頁面切換掣
+  top_bar_icon_badges: 圖標邊位標記
   top_bar_icon_badges_opt:
     number: 數字
     dot: 圓點
     none: 唔顯示
+  open_notifications_page_as_drawer: 用櫃桶打開通知頁面
+
+  always_use_dock: 點都要用 Dock
+  always_use_dock_desc: 啓用後，Dock 點都要用佢而唔係用側邊欄。我哋推介你同時啓用自動收埋 Dock 去。
+  auto_hide_dock: 自動收埋 Dock
+  half_hide_dock: 收埋一半 Dock
   dock_position: Dock 放位
   dock_position_desc: 放喺螢幕邊度。
-  auto_hide_dock: 自動收埋 Dock
   dock_content_adjustment: Dock 內容調整
   dock_content_adjustment_desc: 第一個啓用嘅 Dock 項個頁面會係開始頁面。
-  disable_light_dark_mode_switcher: 閂咗淺/深色主題切換粒掣
-  move_back_to_top_and_refresh_to_dock: 將返去頂部同重新整理粒掣擺到落 Dock 度
+  dock_item_open_in_new_tab: 在新分頁度開啓
+  dock_item_use_original_bili_web_page: 用返原本嘅 Bilibili 網頁
+  disable_dock_glowing_effect: 熄咗 Dock 發光效果去
+  disable_light_dark_mode_switcher: 閂咗淺 / 深色主題切換粒掣去
+  back_to_top_and_refresh_buttons_are_separated: 分離返到最篤同重新整理掣
   sidebar_position: 側邊欄位置
   auto_hide_sidebar: 自動收埋側邊欄
 
@@ -158,7 +185,7 @@ settings:
     dark: 深色
     auto: 自動
   theme_color: 主題色
-  gradient_theme_color_background: 使用漸層主題色作為深色模式嘅背景
+  gradient_theme_color_background: 使用漸層主題色作爲深色模式嘅背景
   wallpaper_mode: 背景圖片模式
   wallpaper_mode_desc: '使用網址: 直接用網上圖片嘅網址嚟到設定背景圖片。'
   wallpaper_mode_opt:
@@ -228,6 +255,8 @@ settings:
   filter_by_user_table:
     username_or_mid: 用戶名 / MID
 
+  following_tab_show_livestreaming_videos: 喺「跟緊啲人」入邊顯示實況直播
+
   use_search_page_mode: 主頁使用搵嘢頁模式
   settings_shared_with_the_search_page: 同搵嘢頁共用嘅設定
   settings_shared_with_the_search_page_desc: 呢啲設定同搵嘢頁嗰度共用。
@@ -261,10 +290,22 @@ settings:
   reset_settings_confirm: |-
     重設設定？
     噉做冇得返轉頭噃，你確定要重設你之前嘅設定？
+
+  safari_helpers: 幫過上架 Safari 商店嘅人
+  safari_helpers_desc1: 提交 PR 支援 Safari
+  safari_helpers_desc2: 幫手免費上架 Safari
+  safari_helpers_desc3: 幫手解答註冊蘋果開發者問題
+  safari_helpers_desc4: 幫手解答註冊蘋果開發者問題
+
   contributors: 貢獻者
+
 auth:
   auth_access_key_first: 整之前記得先授權 BewlyBewly 去用 access key
+
 topbar:
+  switch_to_bewly_top_bar: 切換到 BewlyBewly 頂部欄
+  switch_to_bili_top_bar: 切換到 Bilibili/Bilibili-Evolved 頂部欄
+
   sign_in: 登入
   notifications: 通知
   moments: 動向
@@ -299,7 +340,7 @@ topbar:
     vlog: VLOG
     funny: 搞笑
     standalone_gaming: 單機遊戲
-    vtubers: Vtubers & Vups
+    vtubers: VTubers & Vups
     charitable_events: 慈善
     moocs: 線上學堂
     articles: 專欄
@@ -316,7 +357,7 @@ topbar:
     money: 銀仔：
     b_coins: B銀：
     exp_desc: '而家經驗 {current_exp}，升到 LV {level} 仲要 {need_exp}'
-    following: 追緊
+    following: 跟緊
     followers: 擁躉
     posts: 動向
     bilibili_premium: Bilibili 大會員
@@ -331,7 +372,7 @@ topbar:
   noti_dropdown:
     replys: 覆我
     mentions: 提我
-    likes: 畀我 like
+    likes: 讚我
     messages: 系统通知
     chats: 傾偈室
   moments_dropdown:
@@ -348,6 +389,7 @@ topbar:
     sticker: 出貼圖
     video: Po 片
     manager: 內容管理
+
 dock:
   search: 搵嘢
   home: 主頁
@@ -355,24 +397,46 @@ dock:
   history: 收睇記錄
   watch_later: 陣間至睇
   favorites: 我嘅至愛
+  moments: 動向
   dark_mode: 深色模式
   light_mode: 淺色模式
   settings: 設定
+
+video_card:
+  operation:
+    not_interested: 唔鍾意
+    open_in_new_tab: 新分頁開啓
+    open_in_background: 後台開啓
+    open_in_new_window: 新視窗開啓
+    open_in_current_tab: 目前分頁開啓
+    open_in_drawer: 櫃桶開啓
+
+    copy_video_link: 複製影片連結
+    copy_bv_number: 複製 BV 號
+    copy_av_number: 複製 AV 號
+
+    view_the_original_cover: 睇吓封面
+
+  group_contribution: '{firstAuthor} 等 {num} 人一齊創作'
+  video_removed: 經已鏟咗條片
+
 home:
-  not_interested: 唔鍾意
-  not_interested_desc: 你可以用 <kbd>↑</kbd> 同 <kbd>↓</kbd> 嚟揀個理由，抑或用數字鍵嚟直接揀理由，撳 <kbd>Enter</kbd> 就直接提交。
   tell_us_why: 點解噉做...
-  video_removed: 已經鏟咗條片
+  not_interested_desc: 你可以用 <kbd>↑</kbd> 同 <kbd>↓</kbd> 嚟揀個理由，抑或用數字鍵嚟直接揀理由，撳 <kbd>Enter</kbd> 就直接提交。
+
   for_you: 估你心水
-  following: Follow 緊
+  following: 跟緊啲人
   trending: 時下至 Hit
   ranking: 排行
   subscribed_series: 訂閱劇集
+  live: 直播
+
 ranking:
   all: 全部
   chinese_anime_related: 中國動畫相關
   original_content: 原創內容
   debut_work: 新人作品
+
 anime:
   total_episodes: 共 {ep} 集
   update_to_n_episodes: 更新到 {ep} 集
@@ -391,6 +455,7 @@ anime:
       fri: 週五
       sat: 週六
       sun: 週日
+
 history:
   title: 收睇記錄
   turn_on_watch_history: 開返收睇記錄
@@ -406,11 +471,13 @@ history:
   turn_on_watch_history_confirm: |-
     係咪要開返收睇記錄呀？
     你確定要開返收睇記錄？
+
 favorites:
   unfavorite: 唔愛喇
   unfavorite_confirm: |-
     係咪要剷走你揀過啲片呀？
     噉做冇得返轉頭噃，你確定要剷走你揀過啲片？
+
 watch_later:
   title: 陣間至睇
   clear_all: 剷曬陣間至睇啲片
@@ -421,6 +488,7 @@ watch_later:
   remove_watched_videos_confirm: |-
     係咪要剷走你睇過啲片呀？
     噉做冇得返轉頭噃，你確定要剷走你睇過啲片？
+
 search_bar:
   history_title: 搜尋記錄
   clear_history: 剷晒你啲搜尋記錄

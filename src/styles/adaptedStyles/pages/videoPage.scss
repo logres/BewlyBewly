@@ -1,36 +1,31 @@
 .bewly-design.videoPage {
-  .user-card-m-exp .layout,
   .up-detail .up-detail-top .up-name.is_vip:hover .mask,
-  .up-detail .up-detail-top .up-name.small-vip:hover .mask {
+  .up-detail .up-detail-top .up-name.small-vip:hover .mask,
+  .up-detail .up-detail-top .up-name.vip:hover .mask {
     display: none;
   }
 
-  .user-card-m-exp .user-info-wrapper {
-    background-color: var(--bew-bg);
-    border-radius: 0 0 8px 8px;
+  // ai 小助手
+  [class^="_VideoAssistant"] {
+    --app_bg: #f1f6fc;
+    --app_graph_bg: #e6ecf4;
   }
 
-  .collection-m-exp {
-    position: relative;
+  [class^="_VideoAssistant"] * {
+    --brand_blue: var(--bew-bili-blue);
   }
 
-  .qrcode .van-qrcode {
-    padding: 5px;
-  }
-
-  .qrcode .van-qrcode canvas {
-    width: 90px;
-    height: 90px;
+  &.dark [class^="_VideoAssistant"] {
+    --app_bg: var(--bew-elevated-alt-solid);
+    --app_graph_bg: var(--bew-fill-1);
   }
 
   // #region theme color adaption part
   // Increase the priority of the style inside by writing a non-existent selector in `:not()`
   :not(foobar) {
     .content .group-list li input[type="checkbox"] + i {
-      border-width: 1px;
       border-radius: 5px;
-      border-color: #bec3cc;
-      border-style: solid;
+      border: 1px solid var(--bew-border-color);
     }
 
     .coin-operated-m-exp .like-checkbox input[type="checkbox"]:checked + i {
@@ -59,11 +54,14 @@
 
     .note-list .list-note-operation,
     .note-pc .note-container .note-header .note-operation,
-    .note-up .up-desc-container .desc-top .attention-btn-container:not(.is-attention) {
+    .note-up .up-desc-container .desc-top .attention-btn-container:not(.is-attention),
+    .up-detail .up-detail-top .live-status:hover {
       background-color: var(--bew-theme-color);
     }
 
-    .user-card-m-exp .user-info-wrapper .info .user .user-label {
+    .user-card-m-exp .user-info-wrapper .info .user .user-label,
+    #pub button,
+    .editor-innter div:last-child div {
       background-color: var(--bew-theme-color) !important;
     }
 
@@ -103,6 +101,15 @@
       background-color: var(--bew-error-color-10);
     }
 
+    ._Fallback_1t0d5_1 ._Main_1t0d5_10 ._Item_1t0d5_15 {
+      background-color: var(--bew-content);
+    }
+
+    ._SeekSections_1iu0q_1 ._Item_1iu0q_1 ._Parts_1iu0q_16 ._Part_1iu0q_16 ._Time_1iu0q_28 ._TimeText_1iu0q_35,
+    ._SeekSections_1iu0q_1 ._Item_1iu0q_1 ._Parts_1iu0q_16 ._Part_1iu0q_16:hover {
+      background-color: var(--bew-fill-1);
+    }
+
     .video-sections-v1 .video-sections-head_first-line .first-line-left .first-line-title:hover,
     .note-detail .note-operation .tab-action-item.is-active .tab-icon {
       color: var(--bew-theme-color);
@@ -126,7 +133,8 @@
     .up-name.is_vip,
     .up-name.small-vip,
     .up-detail .up-detail-top .up-name[style*="color: rgb(251, 114, 153)"],
-    .up-detail .up-detail-top .up-name[style*="color:#FB7299;"] {
+    .up-detail .up-detail-top .up-name[style*="color:#FB7299;"],
+    .user-card-m-exp .user-info-wrapper .info .user .name[style*="color: rgb(251, 114, 153)"] {
       color: var(--bew-theme-color) !important;
     }
 
@@ -159,6 +167,10 @@
     .content .group-list li input[type="checkbox"]:checked:hover + i,
     .coin-operated-m-exp .like-checkbox input[type="checkbox"]:checked + i {
       border-color: var(--bew-theme-color);
+    }
+
+    .editor-innter div:last-child {
+      border-color: var(--bew-theme-color) !important;
     }
 
     .upinfo-btn-panel .not-follow-charge-btn:hover,
@@ -243,8 +255,9 @@
     .upinfo-btn-panel .new-charge-btn .charge-btn-icon img,
     .bpx-player-viewpoint-menu-item-active,
     .cur-play-icon,
-    .playing-gif,
-    .multi-page-v1 .cur-list .list-box li.on img {
+    .multi-page-v1 .cur-list .list-box li.on img,
+    .upinfo-btn-panel .new-charge-btn .charge-btn-icon img,
+    .playing-gif {
       filter: var(--bew-filter-icon-glow);
     }
 
@@ -281,8 +294,16 @@
 
     .note-list .note-card-container .note-card,
     .resizable-component .ql-tag-blot .time-tag-item,
-    .ql-toolbar {
+    .ql-toolbar,
+    ._Tabs_krx6h_1 ._TabItem_krx6h_8._Active_krx6h_36,
+    ._SeekSections_1iu0q_1 ._Item_1iu0q_1,
+    ._Fallback_1t0d5_1 ._Main_1t0d5_10 ._Item_1t0d5_15,
+    .video-argue .video-argue-inner.general {
       background-color: var(--bew-fill-1);
+    }
+
+    ._SeekSections_1iu0q_1 ._Item_1iu0q_1 ._Parts_1iu0q_16 ._Part_1iu0q_16:hover {
+      background-color: var(--bew-fill-2);
     }
 
     .bpx-player-container[data-revision="1"]
@@ -337,7 +358,8 @@
       color: var(--bew-text-1);
     }
 
-    .user-card-m-exp .user-info-wrapper .info .user .name {
+    .user-card-m-exp .user-info-wrapper .info .user .name,
+    .editor-innter div:last-child div:last-child {
       color: var(--bew-text-1) !important;
     }
 
@@ -348,7 +370,8 @@
       color: var(--bew-text-2);
     }
 
-    .note-list .note-card-container .note-card .note-info {
+    .note-list .note-card-container .note-card .note-info,
+    .video-argue .video-argue-inner.general {
       color: var(--bew-text-3);
     }
 
@@ -372,6 +395,10 @@
     .note-list .note-card-container .note-card:hover,
     .note-detail .note-operation .sanlian-box {
       border-color: var(--bew-border-color);
+    }
+
+    .qrcode .van-qrcode {
+      box-shadow: 0 0 0 5px white;
     }
   }
   //  #endregion

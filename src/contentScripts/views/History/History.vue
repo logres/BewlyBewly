@@ -2,18 +2,17 @@
 import { useDateFormat } from '@vueuse/core'
 import { useI18n } from 'vue-i18n'
 
-import { useApiClient } from '~/composables/api'
 import { useBewlyApp } from '~/composables/useAppProvider'
-import { settings } from '~/logic'
 import type { HistoryResult, List as HistoryItem } from '~/models/history/history'
 import { Business } from '~/models/history/history'
 import type { HistorySearchResult, List as HistorySearchItem } from '~/models/video/historySearch'
+import { useMainStore } from '~/stores/mainStore'
+import api from '~/utils/api'
 import { calcCurrentTime } from '~/utils/dataFormatter'
 import { getCSRF, removeHttpFromUrl } from '~/utils/main'
 
 const { t } = useI18n()
-const api = useApiClient()
-const { openIframeDrawer } = useBewlyApp()
+const { setActivatedCover } = useMainStore()
 
 const isLoading = ref<boolean>()
 const noMoreContent = ref<boolean>(false)
@@ -67,7 +66,7 @@ function getHistoryList() {
           ? historyList[historyList.length - 1].view_at
           : 0,
   })
-    .then((res: HistoryResult) => {
+    .then(async (res: HistoryResult) => {
       if (res.code === 0) {
         if (Array.isArray(res.data.list) && res.data.list.length > 0)
           historyList.push(...res.data.list)
@@ -80,10 +79,11 @@ function getHistoryList() {
 
         noMoreContent.value = false
 
-        if (!haveScrollbar() && !noMoreContent.value) {
+        if (!await haveScrollbar() && !noMoreContent.value) {
           getHistoryList()
         }
       }
+    }).finally(() => {
       isLoading.value = false
     })
 }
@@ -108,6 +108,7 @@ function searchHistoryList() {
 
         noMoreContent.value = false
       }
+    }).finally(() => {
       isLoading.value = false
     })
 }
@@ -144,19 +145,19 @@ function getHistoryUrl(item: HistoryItem): string {
   // Video
   if (item.history.business === Business.ARCHIVE) {
     if (item?.videos && item.videos > 0)
-      return `//www.bilibili.com/video/${item.history.bvid}?p=${item.history.page}`
-    return `//www.bilibili.com/video/${item.history.bvid}`
+      return `https://www.bilibili.com/video/${item.history.bvid}?p=${item.history.page}`
+    return `https://www.bilibili.com/video/${item.history.bvid}`
   }
   // Live
   else if (item.history.business === Business.LIVE) {
-    return `//live.bilibili.com/${item.history.oid}`
+    return `https://live.bilibili.com/${item.history.oid}`
   }
   // Article
   else if (item.history.business === Business.ARTICLE || item.history.business === Business.ARTICLE_LIST) {
     if (item.history.cid === 0)
-      return `//www.bilibili.com/read/cv${item.history.oid}`
+      return `https://www.bilibili.com/read/cv${item.history.oid}`
     else
-      return `//www.bilibili.com/read/cv${item.history.cid}`
+      return `https://www.bilibili.com/read/cv${item.history.cid}`
   }
   return ''
 }
@@ -226,6 +227,10 @@ function handleTurnOnWatchHistory() {
 function jumpToLoginPage() {
   location.href = 'https://passport.bilibili.com/login'
 }
+
+function handleMouseEnter(item: HistoryItem) {
+  setActivatedCover(`${getHistoryItemCover(item)}@480w_270h_1c`)
+}
 </script>
 
 <template>
@@ -236,17 +241,16 @@ function jumpToLoginPage() {
       </h3>
       <!-- historyList -->
       <TransitionGroup name="list">
-        <a
+        <ALink
           v-for="(historyItem, index) in historyList"
           :key="historyItem.kid"
-          :href="settings.videoCardLinkOpenMode === 'drawer' ? undefined : getHistoryUrl(historyItem)"
-          target="_blank"
-          rel="noopener noreferrer"
+          type="videoCard"
+          :href="getHistoryUrl(historyItem)"
           block
           class="group"
           flex
           cursor-pointer
-          @click="settings.videoCardLinkOpenMode === 'drawer' && openIframeDrawer(getHistoryUrl(historyItem))"
+          @mouseenter="handleMouseEnter(historyItem)"
         >
           <!-- time slot -->
           <div
@@ -374,7 +378,7 @@ function jumpToLoginPage() {
             <div flex justify-between w-full h-full>
               <div flex="~ col">
                 <a
-                  :href="`${getHistoryUrl(historyItem)}`" target="_blank" rel="noopener noreferrer"
+                  :href="`${getHistoryUrl(historyItem)}`" target="_blank"
                   :title="historyItem.show_title ? historyItem.show_title : historyItem.title"
                 >
                   <h3
@@ -396,7 +400,7 @@ function jumpToLoginPage() {
                   hover:bg="$bew-theme-color-10"
                   duration-300
                   pr-2
-                  :href="historyItem.author_mid ? `https://space.bilibili.com/${historyItem.author_mid}` : historyItem.uri" target="_blank" rel="noopener noreferrer"
+                  :href="historyItem.author_mid ? `https://space.bilibili.com/${historyItem.author_mid}` : historyItem.uri" target="_blank"
                 >
                   <img
                     :src="
@@ -459,13 +463,13 @@ function jumpToLoginPage() {
                 opacity-0 group-hover:opacity-100
                 p-2
                 duration-300
-                @click.prevent="deleteHistoryItem(index, historyItem)"
+                @click.prevent.stop="deleteHistoryItem(index, historyItem)"
               >
                 <div i-tabler:trash />
               </button>
             </div>
           </section>
-        </a>
+        </ALink>
       </TransitionGroup>
 
       <!-- no more content -->

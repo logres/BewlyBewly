@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { useEventListener } from '@vueuse/core'
 import { useI18n } from 'vue-i18n'
 
 import { settings } from '~/logic'
+import { createTransformer } from '~/utils/transformer'
 
 import type { MenuItem } from './types'
 import { MenuType } from './types'
@@ -14,14 +16,27 @@ const settingsMenu = {
   [MenuType.General]: defineAsyncComponent(() => import('./General/General.vue')),
   [MenuType.DesktopAndDock]: defineAsyncComponent(() => import('./DesktopAndDock/DesktopAndDock.vue')),
   [MenuType.Appearance]: defineAsyncComponent(() => import('./Appearance/Appearance.vue')),
-  [MenuType.SearchPage]: defineAsyncComponent(() => import('./SearchPage/SearchPage.vue')),
-  [MenuType.Home]: defineAsyncComponent(() => import('./Home/Home.vue')),
+  [MenuType.BewlyPages]: defineAsyncComponent(() => import('./BewlyPages/BewlyPages.vue')),
   [MenuType.Compatibility]: defineAsyncComponent(() => import('./Compatibility/Compatibility.vue')),
   // [MenuType.BilibiliSettings]: defineAsyncComponent(() => import('./BilibiliSettings/BilibiliSettings.vue')),
   [MenuType.About]: defineAsyncComponent(() => import('./About/About.vue')),
 }
 const activatedMenuItem = ref<MenuType>(MenuType.General)
 const title = ref<string>(t('settings.title'))
+const settingsWindow = ref<HTMLDivElement>()
+
+useEventListener(window, 'resize', () => {
+  createTransformer(settingsWindow, {
+    x: '50%',
+    y: '50%',
+    notrigger: true,
+    centerTarget: {
+      x: true,
+      y: true,
+    },
+  })
+})
+
 const scrollbarRef = ref()
 
 watch(
@@ -53,16 +68,10 @@ const settingsMenuItems = computed((): MenuItem[] => {
       iconActivated: 'i-mingcute:paint-brush-fill',
     },
     {
-      value: MenuType.SearchPage,
-      icon: 'i-mingcute:search-2-line',
-      iconActivated: 'i-mingcute:search-2-fill',
-      title: t('settings.menu_search_page'),
-    },
-    {
-      value: MenuType.Home,
-      icon: 'i-mingcute:home-5-line',
-      iconActivated: 'i-mingcute:home-5-fill',
-      title: t('settings.menu_home'),
+      value: MenuType.BewlyPages,
+      icon: 'i-mingcute:table-2-line',
+      iconActivated: 'i-mingcute:table-2-fill',
+      title: t('settings.menu_bewly_pages'),
     },
     {
       value: MenuType.Compatibility,
@@ -119,29 +128,41 @@ function setCurrentTitle() {
       class="fixed w-full h-full top-0 left-0"
       @click="handleClose"
     />
-
     <div
-      id="settings-window" pos="fixed top-1/2 left-1/2" w="90%" h="90%"
+      id="settings-window"
+      ref="settingsWindow"
+      pos="fixed top-1/2 left-1/2" w="90%" h="90%"
       max-w-1000px max-h-900px transform="~ translate-x--1/2 translate-y--1/2 gpu"
-      flex justify-between items-center
+      flex="~ justify-between items-center"
     >
       <aside
         :class="{ group: !settings.touchScreenOptimization }"
-        shrink-0 p="x-4" pos="absolute left--84px" z-2
+        shrink-0 p="x-4" pos="absolute xl:left--84px left--44px" z-2
       >
         <ul
           style="
-            --un-shadow: var(--bew-shadow-4), var(--bew-shadow-edge-glow-2);
-            backdrop-filter: var(--bew-filter-glass-2);
+            box-shadow: var(--bew-shadow-4);
           "
-          flex="~ gap-2 col" rounded="30px group-hover:25px" p-2 shadow
+          relative flex="~ gap-2 col" rounded="30px group-hover:25px" p-2
           bg="$bew-content-alt group-hover:$bew-elevated dark:$bew-elevated dark-group-hover:$bew-elevated"
           scale="group-hover:105" duration-300 overflow-hidden antialiased transform-gpu
-          border="1 $bew-border-color"
         >
+          <!-- frosted glass background -->
+          <!-- https://github.com/BewlyBewly/BewlyBewly/issues/1162 -->
+          <div
+            style="
+              box-shadow: var(--bew-shadow-edge-glow-2);
+              backdrop-filter: var(--bew-filter-glass-2);
+            "
+            pos="absolute top-0 left-0" z--1
+            w-full h-full pointer-events-none
+            border="1 $bew-border-color" transform-gpu
+            rounded-inherit duration-inherit
+          />
+
           <li v-for="menuItem in settingsMenuItems" :key="menuItem.value">
             <a
-              cursor-pointer w="40px group-hover:180px" h-40px
+              cursor-pointer w="40px group-hover:190px" h-40px
               rounded-30px flex items-center overflow-x-hidden
               duration-300 bg="hover:$bew-fill-2"
               :class="{ 'menu-item-activated': menuItem.value === activatedMenuItem }"
@@ -169,7 +190,7 @@ function setCurrentTitle() {
           --un-shadow: var(--bew-shadow-4), var(--bew-shadow-edge-glow-2);
           backdrop-filter: var(--bew-filter-glass-2);
         "
-        relative overflow="x-hidde" w-full h-full bg="$bew-elevated-alt"
+        relative overflow="x-hidden" w-full h-full bg="$bew-elevated-alt"
         shadow rounded="$bew-radius" border="1 $bew-border-color" transform-gpu
       >
         <header
@@ -234,6 +255,6 @@ function setCurrentTitle() {
 
 <style lang="scss" scoped>
 .menu-item-activated {
-  --uno: "text-white dark-text-black important-dark-bg-white important-bg-$bew-theme-color";
+  --uno: "text-$bew-text-auto bg-$bew-theme-color-auto";
 }
 </style>

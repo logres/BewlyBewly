@@ -2,16 +2,17 @@
 import { useDateFormat } from '@vueuse/core'
 import { useI18n } from 'vue-i18n'
 
-import { useApiClient } from '~/composables/api'
 import { useBewlyApp } from '~/composables/useAppProvider'
 import { settings } from '~/logic'
 import type { List as VideoItem, WatchLaterResult } from '~/models/video/watchLater'
+import { useMainStore } from '~/stores/mainStore'
+import api from '~/utils/api'
 import { calcCurrentTime } from '~/utils/dataFormatter'
 import { getCSRF, openLinkToNewTab, removeHttpFromUrl } from '~/utils/main'
 
 const { t } = useI18n()
-const api = useApiClient()
 const { openIframeDrawer } = useBewlyApp()
+const { setActivatedCover } = useMainStore()
 
 const isLoading = ref<boolean>()
 const noMoreContent = ref<boolean>()
@@ -71,7 +72,7 @@ async function getAllWatchLaterList() {
   }
 }
 
-function getCurrentWatchLaterList() {
+async function getCurrentWatchLaterList() {
   const allWatchLaterListCopy = JSON.parse(JSON.stringify(allWatchLaterList.value))
   const currentList = allWatchLaterListCopy.slice((pageNum.value - 1) * 10, pageNum.value * 10)
 
@@ -82,7 +83,7 @@ function getCurrentWatchLaterList() {
   pageNum.value++
   currentWatchLaterList.value.push(...currentList)
 
-  if (!haveScrollbar() && !noMoreContent.value) {
+  if (!await haveScrollbar() && !noMoreContent.value) {
     getCurrentWatchLaterList()
   }
 }
@@ -137,8 +138,24 @@ function handlePlayAll() {
   openLinkToNewTab('https://www.bilibili.com/list/watchlater')
 }
 
+function handleLinkClick(url: string) {
+  if (settings.value.videoCardLinkOpenMode === 'drawer') {
+    openIframeDrawer(url) // 在抽屉打开
+  }
+  else if (settings.value.videoCardLinkOpenMode === 'currentTab') {
+    window.open(url, '_self') // 在当前标签页打开
+  }
+  else {
+    openLinkToNewTab(url) // 在新标签页打开
+  }
+}
+
 function jumpToLoginPage() {
   location.href = 'https://passport.bilibili.com/login'
+}
+
+function handleMouseEnter(item: VideoItem) {
+  setActivatedCover(`${removeHttpFromUrl(item.pic)}@480w_270h_1c`)
 }
 </script>
 
@@ -152,15 +169,14 @@ function jumpToLoginPage() {
       <template v-else>
         <!-- watcher later list -->
         <TransitionGroup name="list">
-          <a
+          <ALink
             v-for="(item, index) in currentWatchLaterList"
             :key="item.aid"
-            :href="settings.videoCardLinkOpenMode === 'drawer' ? undefined : `https://www.bilibili.com/list/watchlater?bvid=${item.bvid}`"
-            target="_blank"
-            rel="noopener noreferrer"
+            :href="`https://www.bilibili.com/list/watchlater?bvid=${item.bvid}`"
+            type="videoCard"
             class="group"
             flex cursor-pointer
-            @click="settings.videoCardLinkOpenMode === 'drawer' && openIframeDrawer(`https://www.bilibili.com/list/watchlater?bvid=${item.bvid}`)"
+            @mouseenter="handleMouseEnter(item)"
           >
             <section
               rounded="$bew-radius"
@@ -234,7 +250,7 @@ function jumpToLoginPage() {
                     class="keep-two-lines"
                     overflow="hidden"
                     un-text="lg overflow-ellipsis"
-                    :href="removeHttpFromUrl(`https://www.bilibili.com/list/watchlater?bvid=${item.bvid}`)" target="_blank" rel="noopener noreferrer"
+                    @click.stop.prevent="handleLinkClick(`https://www.bilibili.com/list/watchlater?bvid=${item.bvid}`)"
                   >
                     {{ item.title }}
                   </a>
@@ -250,7 +266,8 @@ function jumpToLoginPage() {
                     hover:bg="$bew-theme-color-10"
                     duration-300
                     pr-2
-                    :href="`//space.bilibili.com/${item.owner.mid}`" target="_blank" rel="noopener noreferrer"
+                    :href="`//space.bilibili.com/${item.owner.mid}`" target="_blank"
+                    @click.stop
                   >
                     <img
                       :src="removeHttpFromUrl(`${item.owner.face}@40w_40h_1c`)"
@@ -280,15 +297,14 @@ function jumpToLoginPage() {
                     opacity-0 group-hover:opacity-100
                     p-2
                     duration-300
-                    @click.prevent="deleteWatchLaterItem(index, item.aid)"
+                    @click.prevent.stop="deleteWatchLaterItem(index, item.aid)"
                   >
                     <div i-tabler:trash />
                   </button>
                 </div>
-
               </div>
             </section>
-          </a>
+          </ALink>
         </TransitionGroup>
         <!-- loading -->
         <Transition name="fade">
@@ -303,36 +319,38 @@ function jumpToLoginPage() {
     <aside relative w="full md:40% lg:30% xl:25%" order="1 md:2 lg:2">
       <div
         pos="sticky top-120px"
-        w-full h="auto md:[calc(100vh-160px)]"
+        w-full h="230px md:[calc(100vh-160px)]"
         my-10
         rounded="$bew-radius"
         overflow-hidden
       >
         <!-- Frosted Glass Cover -->
         <div
-          pos="absolute top-0 left-0" w-full h-full
+          pos="absolute top-0 left-0" w-full h-inherit
           z--1
         >
           <div
-            absolute w-full h-full
+            absolute w-full h-inherit
             bg="$bew-fill-4"
           />
           <img
             v-if="currentWatchLaterList[0]"
             :src="removeHttpFromUrl(`${currentWatchLaterList[0].pic}@480w_270h_1c`)"
             w-full h-full object="cover center" blur-40px
+            relative z--1
           >
         </div>
 
         <!-- Content -->
         <main
           pos="absolute top-0 left-0"
-          w-full h-full
+          w-full h-inherit
           overflow-overlay
           flex="~ col gap-4 justify-start"
           p-6
         >
           <picture
+            class="hidden md:block"
             rounded="$bew-radius" style="box-shadow: 0 16px 24px -12px rgba(0, 0, 0, .36)"
             aspect-video mb-4 bg="$bew-skeleton"
           >

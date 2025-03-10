@@ -12,29 +12,49 @@ export interface Settings {
   enableHorizontalScrolling: boolean
 
   language: string
-  customizeFont: boolean
+  customizeFont: 'default' | 'recommend' | 'custom'
   fontFamily: string
+  overrideDanmakuFont: boolean
   removeTheIndentFromChinesePunctuation: boolean
+
   disableFrostedGlass: boolean
   reduceFrostedGlassBlur: boolean
+  disableShadow: boolean
+
+  enableVideoPreview: boolean
+
+  // Link Opening Behavior
+  videoCardLinkOpenMode: 'drawer' | 'newTab' | 'currentTab'
+  topBarLinkOpenMode: 'currentTab' | 'currentTabIfNotHomepage' | 'newTab'
+  searchBarLinkOpenMode: 'currentTab' | 'currentTabIfNotHomepage' | 'newTab'
+  closeDrawerWithoutPressingEscAgain: boolean
 
   blockAds: boolean
+  blockTopSearchPageAds: boolean
 
-  videoCardLinkOpenMode: 'drawer' | 'newTab'
-  enableVideoPreview: boolean
   enableVideoCtrlBarOnVideoCard: boolean
   hoverVideoCardDelayed: boolean
 
   // Desktop & Dock
   useOldTopBar: boolean
-  topBarLinkOpenMode: 'currentTab' | 'currentTabIfNotHomepage' | 'newTab'
   autoHideTopBar: boolean
+  showTopBarThemeColorGradient: boolean
+  showBewlyOrBiliTopBarSwitcher: boolean
+  showBewlyOrBiliPageSwitcher: boolean
   topBarIconBadges: 'number' | 'dot' | 'none'
-  dockPosition: 'left' | 'right' | 'bottom'
+  openNotificationsPageAsDrawer: boolean
+
+  alwaysUseDock: boolean
   autoHideDock: boolean
+  halfHideDock: boolean
+  dockPosition: 'left' | 'right' | 'bottom'
+  /** @deprecated use dockItemsConfig instead */
   dockItemVisibilityList: { page: AppPage, visible: boolean }[]
+  dockItemsConfig: { page: AppPage, visible: boolean, openInNewTab: boolean, useOriginalBiliPage: boolean }[]
+  disableDockGlowingEffect: boolean
   disableLightDarkModeSwitcherOnDock: boolean
-  moveBackToTopOrRefreshButtonToDock: boolean
+  backToTopAndRefreshButtonsAreSeparated: boolean
+
   sidebarPosition: 'left' | 'right'
   autoHideSidebar: boolean
 
@@ -78,6 +98,8 @@ export interface Settings {
   enableFilterByUser: boolean
   filterByUser: { keyword: string, remark: string }[]
 
+  followingTabShowLivestreamingVideos: boolean
+
   homePageTabVisibilityList: { page: HomeSubPage, visible: boolean }[]
   alwaysShowTabsOnHomePage: boolean
   useSearchPageModeOnHomePage: boolean
@@ -95,30 +117,48 @@ export const originalSettings: Settings = {
   enableHorizontalScrolling: false,
 
   language: '',
-  customizeFont: false,
+  customizeFont: 'recommend',
   fontFamily: '',
+  overrideDanmakuFont: true,
   removeTheIndentFromChinesePunctuation: false,
 
   disableFrostedGlass: true,
   reduceFrostedGlassBlur: false,
+  disableShadow: false,
+
+  // Link Opening Behavior
+  videoCardLinkOpenMode: 'newTab',
+  topBarLinkOpenMode: 'currentTabIfNotHomepage',
+  searchBarLinkOpenMode: 'currentTabIfNotHomepage',
+  closeDrawerWithoutPressingEscAgain: false,
 
   blockAds: false,
+  blockTopSearchPageAds: false,
 
-  videoCardLinkOpenMode: 'newTab',
   enableVideoPreview: true,
   enableVideoCtrlBarOnVideoCard: false,
   hoverVideoCardDelayed: false,
 
   // Desktop & Dock
   useOldTopBar: false,
-  topBarLinkOpenMode: 'currentTabIfNotHomepage',
   autoHideTopBar: false,
+  showTopBarThemeColorGradient: true,
+  showBewlyOrBiliTopBarSwitcher: true,
+  showBewlyOrBiliPageSwitcher: true,
   topBarIconBadges: 'number',
-  dockPosition: 'right',
+  openNotificationsPageAsDrawer: true,
+
+  alwaysUseDock: false,
   autoHideDock: false,
+  halfHideDock: false,
+  dockPosition: 'right',
+  /** @deprecated use dockItemsConfig instead */
   dockItemVisibilityList: [],
+  dockItemsConfig: [],
+  disableDockGlowingEffect: false,
   disableLightDarkModeSwitcherOnDock: false,
-  moveBackToTopOrRefreshButtonToDock: true,
+  backToTopAndRefreshButtonsAreSeparated: true,
+
   sidebarPosition: 'right',
   autoHideSidebar: false,
 
@@ -162,6 +202,8 @@ export const originalSettings: Settings = {
   enableFilterByUser: false,
   filterByUser: [],
 
+  followingTabShowLivestreamingVideos: false,
+
   homePageTabVisibilityList: [],
   alwaysShowTabsOnHomePage: false,
   useSearchPageModeOnHomePage: false,
@@ -175,5 +217,18 @@ export const originalSettings: Settings = {
 
 export const settings = useStorageLocal('settings', ref<Settings>(originalSettings), { mergeDefaults: true })
 
-export type GridLayout = 'adaptive' | 'twoColumns' | 'oneColumn'
-export const homePageGridLayout = useStorageLocal('homePageGridLayout', ref<GridLayout>('adaptive'), { mergeDefaults: true })
+export type GridLayoutType = 'adaptive' | 'twoColumns' | 'oneColumn'
+
+export interface GridLayout {
+  home: GridLayoutType
+}
+
+export const gridLayout = useStorageLocal('gridLayout', ref<GridLayout>({
+  home: 'adaptive',
+}), { mergeDefaults: true })
+
+export const sidePanel = useStorageLocal('sidePanel', ref<{
+  home: boolean
+}>({
+  home: true,
+}), { mergeDefaults: true })

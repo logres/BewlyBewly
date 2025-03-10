@@ -1,21 +1,16 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
-
 import Empty from '~/components/Empty.vue'
 import Loading from '~/components/Loading.vue'
 import Progress from '~/components/Progress.vue'
-import { useApiClient } from '~/composables/api'
 import type { List as VideoItem, WatchLaterResult } from '~/models/video/watchLater'
+import api from '~/utils/api'
 import { calcCurrentTime } from '~/utils/dataFormatter'
-import { removeHttpFromUrl } from '~/utils/main'
+import { getCSRF, removeHttpFromUrl } from '~/utils/main'
 
-import ALink from './ALink.vue'
-
-const api = useApiClient()
 const watchLaterList = reactive<VideoItem[]>([])
 const isLoading = ref<boolean>()
 const viewAllUrl = computed((): string => {
-  return 'https://www.bilibili.com/watchlater/#/list'
+  return 'https://www.bilibili.com/watchlater/list'
 })
 const playAllUrl = computed((): string => {
   return 'https://www.bilibili.com/list/watchlater'
@@ -49,11 +44,24 @@ function getAllWatchLaterList() {
       isLoading.value = false
     })
 }
+
+function deleteWatchLaterItem(index: number, aid: number) {
+  api.watchlater.removeFromWatchLater({
+    aid,
+    csrf: getCSRF(),
+  })
+    .then((res) => {
+      if (res.code === 0) {
+        watchLaterList.splice(index, 1)
+      }
+    })
+}
 </script>
 
 <template>
   <div
     style="backdrop-filter: var(--bew-filter-glass-1);"
+    h="[calc(100vh-100px)]" max-h-500px important-overflow-y-overlay
     bg="$bew-elevated"
     w="380px"
     rounded="$bew-radius"
@@ -68,11 +76,10 @@ function getAllWatchLaterList() {
       flex="~"
       justify="between"
       p="y-4 x-6"
-      pos="fixed top-0 left-0"
+      pos="sticky top-0 left-0"
       w="full"
       bg="$bew-elevated"
       z="2"
-      border="!rounded-t-$bew-radius"
     >
       <div flex="~">
         <div>
@@ -82,13 +89,15 @@ function getAllWatchLaterList() {
 
       <div flex="~ gap-4">
         <ALink
-          :href="playAllUrl" rel="noopener noreferrer"
+          :href="playAllUrl"
+          type="topBar"
           flex="~" items="center"
         >
           <span text="sm">{{ $t('common.play_all') }}</span>
         </ALink>
         <ALink
-          :href="viewAllUrl" rel="noopener noreferrer"
+          :href="viewAllUrl"
+          type="topBar"
           flex="~" items="center"
         >
           <span text="sm">{{ $t('common.view_all') }}</span>
@@ -97,115 +106,125 @@ function getAllWatchLaterList() {
     </header>
 
     <!-- watchLater wrapper -->
-    <main overflow-hidden rounded="$bew-radius">
-      <div
-        flex="~ col gap-2"
-        h="430px"
-        overflow="y-scroll"
-        p="x-4"
-      >
-        <!-- loading -->
-        <Loading
-          v-if="isLoading && watchLaterList.length === 0"
-          h="full"
-          flex="~ items-center"
-        />
+    <main
+      overflow-hidden rounded="$bew-radius"
+      flex="~ col gap-2"
+      p="x-4"
+    >
+      <!-- loading -->
+      <Loading
+        v-if="isLoading && watchLaterList.length === 0"
+        h="full"
+        flex="~ items-center"
+      />
 
-        <!-- empty -->
-        <Empty
-          v-if="!isLoading && watchLaterList.length === 0"
-          pos="absolute top-0 left-0"
-          bg="$bew-content"
-          z="0" w="full" h="full"
-          flex="~ items-center"
+      <!-- empty -->
+      <Empty
+        v-if="!isLoading && watchLaterList.length === 0"
+        pos="absolute top-0 left-0"
+        bg="$bew-content"
+        z="0" w="full" h="full"
+        flex="~ items-center"
+        rounded="$bew-radius"
+      />
+
+      <!-- watchlater -->
+      <TransitionGroup name="list">
+        <ALink
+          v-for="(item, index) in watchLaterList"
+          :key="item.aid"
+          :href="getWatchLaterUrl(item.bvid)"
+          class="group"
+          type="topBar"
+          m="last:b-4" p="2"
           rounded="$bew-radius"
-        />
-
-        <!-- watchlater -->
-
-        <!-- Use a transparent `div` instead of `margin-top` to prevent the list item bouncing problem -->
-        <!-- https://github.com/BewlyBewly/BewlyBewly/pull/889#issue-2394127922 -->
-        <div v-if="!isLoading && watchLaterList.length > 0" min-h="50px" />
-
-        <TransitionGroup name="list">
-          <ALink
-            v-for="item in watchLaterList"
-            :key="item.aid"
-            :href="getWatchLaterUrl(item.bvid)" rel="noopener noreferrer"
-            m="last:b-4" p="2"
-            rounded="$bew-radius"
-            hover:bg="$bew-fill-2"
-            duration-300
-          >
-            <section flex="~ gap-4 item-start">
-              <!-- Video cover, live cover, ariticle cover -->
+          hover:bg="$bew-fill-2"
+          duration-300
+        >
+          <section flex="~ gap-4 item-start">
+            <!-- Video cover, live cover, ariticle cover -->
+            <div
+              bg="$bew-skeleton"
+              pos="relative"
+              w="150px"
+              flex="shrink-0"
+              border="rounded-$bew-radius-half"
+              overflow="hidden"
+            >
+              <!-- Delete button -->
               <div
-                bg="$bew-skeleton"
-                w="150px"
-                flex="shrink-0"
-                border="rounded-$bew-radius-half"
-                overflow="hidden"
+                class="group-hover:opacity-100 opacity-0"
+                pos="absolute top-0 right-0" z-1 w-24px h-24px
+                bg="black opacity-60 hover:$bew-error-color"
+                grid="~ place-items-center"
+                m="1"
+                text="white xs"
+                duration-300
+                border="rounded-full"
+                @click.stop.prevent="deleteWatchLaterItem(index, item.aid)"
               >
-                <!-- Video -->
-                <div pos="relative">
-                  <img
-                    w="150px" h-full
-                    class="aspect-video"
-                    :src="`${removeHttpFromUrl(
-                      item.pic,
-                    )}@256w_144h_1c`"
-                    :alt="item.title"
-                    object-cover
-                  >
-                  <div
-                    pos="absolute bottom-0 right-0"
-                    bg="black opacity-60"
-                    m="1"
-                    p="x-2 y-1"
-                    text="white xs"
-                    border="rounded-full"
-                  >
-                    <!--  When progress = -1 means that the user watched the full video -->
-                    {{
-                      `${
-                        item.progress === -1
-                          ? calcCurrentTime(item.duration)
-                          : calcCurrentTime(item.progress)
-                      } /
-                    ${calcCurrentTime(item.duration)}`
-                    }}
-                  </div>
-                </div>
-                <Progress
-                  :percentage="
-                    (item.progress / item.duration) * 100
-                  "
-                />
+                <i i-mingcute:close-line />
               </div>
 
-              <!-- Description -->
-              <div>
-                <h3
-                  class="keep-two-lines"
-                  overflow="hidden"
-                  text="ellipsis"
-                  break-anywhere
+              <!-- Video -->
+              <div pos="relative">
+                <img
+                  w="150px" h-full
+                  class="aspect-video"
+                  :src="`${removeHttpFromUrl(
+                    item.pic,
+                  )}@256w_144h_1c`"
+                  :alt="item.title"
+                  object-cover
                 >
-                  {{ item.title }}
-                </h3>
-                <div text="$bew-text-2 sm" m="t-4" flex="~" align="items-center">
-                  {{ item.owner.name }}
+                <div
+                  pos="absolute bottom-0 right-0"
+                  bg="black opacity-60"
+                  m="1"
+                  p="x-2 y-1"
+                  text="white xs"
+                  border="rounded-full"
+                >
+                  <!--  When progress = -1 means that the user watched the full video -->
+                  {{
+                    `${
+                      item.progress === -1
+                        ? calcCurrentTime(item.duration)
+                        : calcCurrentTime(item.progress)
+                    } /
+                    ${calcCurrentTime(item.duration)}`
+                  }}
                 </div>
               </div>
-            </section>
-          </ALink>
-        </TransitionGroup>
+              <Progress
+                :percentage="
+                  (item.progress / item.duration) * 100
+                "
+              />
+            </div>
 
-        <!-- loading -->
-        <Transition name="fade">
-          <Loading v-if="isLoading && watchLaterList.length !== 0" m="-t-4" />
-        </Transition>
-      </div>
+            <!-- Description -->
+            <div>
+              <h3
+                class="keep-two-lines"
+                overflow="hidden"
+                text="ellipsis"
+                break-anywhere
+              >
+                {{ item.title }}
+              </h3>
+              <div text="$bew-text-2 sm" m="t-4" flex="~" align="items-center">
+                {{ item.owner.name }}
+              </div>
+            </div>
+          </section>
+        </ALink>
+      </TransitionGroup>
+
+      <!-- loading -->
+      <Transition name="fade">
+        <Loading v-if="isLoading && watchLaterList.length !== 0" m="-t-4" />
+      </Transition>
     </main>
   </div>
 </template>

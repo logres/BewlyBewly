@@ -29,18 +29,18 @@ const langOptions = computed(() => {
   ]
 })
 
-const topBarLinkOpenModeOptions = computed(() => {
+const openModeOptions = computed(() => {
   return [
     {
-      label: t('settings.top_bar_link_opening_behavior_opt.current_tab'),
+      label: t('settings.link_opening_behavior_opt.current_tab'),
       value: 'currentTab',
     },
     {
-      label: t('settings.top_bar_link_opening_behavior_opt.current_tab_if_not_homepage'),
+      label: t('settings.link_opening_behavior_opt.current_tab_if_not_homepage'),
       value: 'currentTabIfNotHomepage',
     },
     {
-      label: t('settings.top_bar_link_opening_behavior_opt.new_tab'),
+      label: t('settings.link_opening_behavior_opt.new_tab'),
       value: 'newTab',
     },
   ]
@@ -49,12 +49,33 @@ const topBarLinkOpenModeOptions = computed(() => {
 const videoCardOpenModeOptions = computed(() => {
   return [
     {
-      label: t('settings.video_card_link_opening_behavior_opt.drawer'),
+      label: t('settings.link_opening_behavior_opt.current_tab'),
+      value: 'currentTab',
+    },
+    {
+      label: t('settings.link_opening_behavior_opt.drawer'),
       value: 'drawer',
     },
     {
-      label: t('settings.video_card_link_opening_behavior_opt.new_tab'),
+      label: t('settings.link_opening_behavior_opt.new_tab'),
       value: 'newTab',
+    },
+  ]
+})
+
+const fontPreferenceOptions = computed(() => {
+  return [
+    {
+      label: t('settings.customize_font_opt.default'),
+      value: 'default',
+    },
+    {
+      label: t('settings.customize_font_opt.recommend'),
+      value: 'recommend',
+    },
+    {
+      label: t('settings.customize_font_opt.custom'),
+      value: 'custom',
     },
   ]
 })
@@ -89,14 +110,21 @@ watch(() => settings.value.language, (newValue) => {
         />
       </SettingsItem>
       <SettingsItem :title="$t('settings.customize_font')">
-        <Radio v-model="settings.customizeFont" />
-        <template v-if="settings.customizeFont" #bottom>
+        <Select
+          v-model="settings.customizeFont"
+          :options="fontPreferenceOptions"
+          w="full"
+        />
+        <template v-if="settings.customizeFont === 'custom'" #bottom>
           <Input v-model="settings.fontFamily" @keydown.stop.passive="() => {}" />
-          <div class="customize-font-desc" text="sm $bew-text-2" mt-1 v-html="t('settings.customize_font_desc')" />
+          <div text="sm $bew-text-2" mt-1 v-html="t('settings.customize_font_desc')" />
         </template>
       </SettingsItem>
       <SettingsItem :title="$t('settings.remove_the_indent_from_chinese_punctuation')" :desc="$t('settings.remove_the_indent_from_chinese_punctuation_desc')">
         <Radio v-model="settings.removeTheIndentFromChinesePunctuation" />
+      </SettingsItem>
+      <SettingsItem :title="$t('settings.override_danmaku_font')" :desc="$t('settings.override_danmaku_font_desc')">
+        <Radio v-model="settings.overrideDanmakuFont" />
       </SettingsItem>
     </SettingsItemGroup>
 
@@ -110,11 +138,14 @@ watch(() => settings.value.language, (newValue) => {
       >
         <Radio v-model="settings.reduceFrostedGlassBlur" />
       </SettingsItem>
+      <SettingsItem :title="$t('settings.disable_shadow')">
+        <Radio v-model="settings.disableShadow" />
+      </SettingsItem>
     </SettingsItemGroup>
 
     <SettingsItemGroup :title="$t('settings.group_link_opening_behavior')">
       <SettingsItem :title="$t('settings.top_bar_link_opening_behavior')">
-        <Select v-model="settings.topBarLinkOpenMode" :options="topBarLinkOpenModeOptions" w="full" />
+        <Select v-model="settings.topBarLinkOpenMode" :options="openModeOptions" w="full" />
       </SettingsItem>
       <SettingsItem :title="$t('settings.video_card_link_opening_behavior')">
         <Select
@@ -123,11 +154,27 @@ watch(() => settings.value.language, (newValue) => {
           w="full"
         />
       </SettingsItem>
+      <SettingsItem :title="$t('settings.search_bar_link_opening_behavior')">
+        <Select
+          v-model="settings.searchBarLinkOpenMode"
+          :options="openModeOptions"
+          w="full"
+        />
+      </SettingsItem>
+      <SettingsItem>
+        <template #title>
+          <div v-html="$t('settings.close_drawer_without_pressing_esc_again')" />
+        </template>
+        <Radio v-model="settings.closeDrawerWithoutPressingEscAgain" />
+      </SettingsItem>
     </SettingsItemGroup>
 
     <SettingsItemGroup>
       <SettingsItem :title="$t('settings.block_ads')">
         <Radio v-model="settings.blockAds" />
+      </SettingsItem>
+      <SettingsItem :title="$t('settings.block_top_search_page_ads')" :desc="$t('settings.block_top_search_page_ads_desc')">
+        <Radio v-model="settings.blockTopSearchPageAds" />
       </SettingsItem>
     </SettingsItemGroup>
 
@@ -148,9 +195,4 @@ watch(() => settings.value.language, (newValue) => {
 </template>
 
 <style lang="scss" scoped>
-:deep(.customize-font-desc) {
-  a {
-    --uno: "text-$bew-theme-color hover:text-$bew-theme-color-80";
-  }
-}
 </style>

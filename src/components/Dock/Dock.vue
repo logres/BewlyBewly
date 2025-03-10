@@ -1,30 +1,58 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import { useElementSize, useWindowSize } from '@vueuse/core'
+import { computed, ref } from 'vue'
 
 import { useBewlyApp } from '~/composables/useAppProvider'
 import { useDark } from '~/composables/useDark'
+import { useDelayedHover } from '~/composables/useDelayedHover'
 import { AppPage } from '~/enums/appEnums'
 import { settings } from '~/logic'
 import type { DockItem } from '~/stores/mainStore'
 import { useMainStore } from '~/stores/mainStore'
+import { isHomePage, openLinkToNewTab } from '~/utils/main'
 
 import Tooltip from '../Tooltip.vue'
 import type { HoveringDockItem } from './types'
 
-defineProps<{
+const props = defineProps<{
   activatedPage: AppPage
 }>()
 
-// const emit = defineEmits(['changePage', 'settingsVisibilityChange', 'refresh', 'backToTop'])
+// const emit = defineEmits(['pageChange', 'settingsVisibilityChange', 'refresh', 'backToTop'])
 const emit = defineEmits<{
-  (e: 'changePage', page: AppPage): void
+  (e: 'dockItemClick', dockItem: DockItem): void
+  (e: 'dockItemMiddleClick', dockItem: DockItem): void
   (e: 'settingsVisibilityChange'): void
   (e: 'refresh'): void
   (e: 'backToTop'): void
 }>()
+
 const mainStore = useMainStore()
 const { isDark, toggleDark } = useDark()
 const { reachTop } = useBewlyApp()
+
+const hideDock = ref<boolean>(false)
+const dockContentHover = ref<boolean>(false)
+const dockContentRef = useDelayedHover({
+  enterDelay: 100,
+  leaveDelay: 600,
+  enter: () => {
+    dockContentHover.value = true
+    toggleHideDock(false)
+  },
+  leave: () => {
+    dockContentHover.value = false
+    toggleHideDock(true)
+  },
+})
+
+const hoveringDockItem = reactive<HoveringDockItem>({
+  themeMode: false,
+  settings: false,
+})
+const currentDockItems = ref<DockItem[]>([])
+const activatedDockItem = ref<DockItem>()
 
 const tooltipPlacement = computed(() => {
   if (settings.value.dockPosition === 'left')
@@ -36,47 +64,75 @@ const tooltipPlacement = computed(() => {
   return 'right'
 })
 
-const hideDock = ref<boolean>(false)
-const hoveringDockItem = reactive<HoveringDockItem>({
-  themeMode: false,
-  settings: false,
+/**
+ * Whether to show the back to top or refresh button
+ */
+const showBackToTopOrRefreshButton = computed((): boolean => {
+  const dockItemConfig = settings.value.dockItemsConfig.find(e => e.page === props.activatedPage)
+  if (dockItemConfig && dockItemConfig.useOriginalBiliPage) {
+    return false
+  }
+
+  return props.activatedPage !== AppPage.Search && isHomePage()
 })
-const currentDockItems = ref<DockItem[]>([])
 
 watch(() => settings.value.autoHideDock, (newValue) => {
   hideDock.value = newValue
-})
+}, { immediate: true })
 
 // use Json stringify to watch the changes of the array item properties
-watch(() => JSON.stringify(settings.value.dockItemVisibilityList), () => {
+watch(() => JSON.stringify(settings.value.dockItemsConfig), () => {
   currentDockItems.value = computeDockItem()
-})
+}, { immediate: true })
 
 function computeDockItem(): DockItem[] {
+  // Transfer the data from dockItemVisibilityList into dockItemsConfig
+  if (settings.value.dockItemVisibilityList.length > 0 && settings.value.dockItemsConfig.length === 0) {
+    settings.value.dockItemsConfig = settings.value.dockItemVisibilityList.map(item =>
+      ({
+        page: item.page,
+        visible: item.visible,
+        openInNewTab: false,
+        useOriginalBiliPage: false,
+      }))
+  }
+
+  if (Array.isArray(settings.value.dockItemsConfig) && settings.value.dockItemsConfig.length < mainStore.dockItems.length) {
+    // Add missing items to dockItemsConfig
+    const missingItems = mainStore.dockItems.filter(dock => !settings.value.dockItemsConfig.some(item => item.page === dock.page))
+    settings.value.dockItemsConfig = [
+      ...settings.value.dockItemsConfig,
+      ...missingItems.map(dock => ({ page: dock.page, visible: true, openInNewTab: false, useOriginalBiliPage: false })),
+    ]
+  }
   // if dockItemVisibilityList not fresh , set it to default
-  if (!settings.value.dockItemVisibilityList.length || settings.value.dockItemVisibilityList.length !== mainStore.dockItems.length)
-    settings.value.dockItemVisibilityList = mainStore.dockItems.map(dock => ({ page: dock.page, visible: true }))
+  else if (!Array.isArray(settings.value.dockItemsConfig) || settings.value.dockItemsConfig.length !== mainStore.dockItems.length) {
+    settings.value.dockItemsConfig = mainStore.dockItems.map(dock =>
+      ({ page: dock.page, visible: true, openInNewTab: false, useOriginalBiliPage: false }),
+    )
+  }
 
   const targetDockItems: DockItem[] = []
 
-  settings.value.dockItemVisibilityList.forEach((item) => {
+  settings.value.dockItemsConfig.forEach((item) => {
     const foundItem = mainStore.dockItems.find(defaultItem => defaultItem.page === item.page)
+    // If the dock item does not have Bewly page, then use the original BiliBili page
+    if (!foundItem?.hasBewlyPage)
+      item.useOriginalBiliPage = true
+
     item.visible && targetDockItems.push({
       i18nKey: foundItem?.i18nKey || '',
       icon: foundItem?.icon || '',
       iconActivated: foundItem?.iconActivated || '',
       page: foundItem?.page || AppPage.Home,
+      openInNewTab: item.openInNewTab,
+      useOriginalBiliPage: item.useOriginalBiliPage || !foundItem?.hasBewlyPage,
+      url: foundItem?.url || '',
+      hasBewlyPage: foundItem?.hasBewlyPage || false,
     })
   })
   return targetDockItems
 }
-
-onMounted(() => {
-  if (settings.value.autoHideDock)
-    hideDock.value = true
-
-  currentDockItems.value = computeDockItem()
-})
 
 function toggleHideDock(hide: boolean) {
   if (settings.value.autoHideDock)
@@ -85,19 +141,88 @@ function toggleHideDock(hide: boolean) {
     hideDock.value = false
 }
 
-function handleBackToTopOrRefresh() {
-  if (reachTop.value)
-    emit('refresh')
-  else
-    emit('backToTop')
+function handleDockItemClick($event: MouseEvent, dockItem: DockItem) {
+  if ($event.ctrlKey || $event.metaKey) {
+    openDockItemInNewTab(dockItem)
+    return
+  }
+
+  activatedDockItem.value = dockItem
+  emit('dockItemClick', dockItem)
 }
+
+function openDockItemInNewTab(dockItem: DockItem) {
+  activatedDockItem.value = dockItem
+  openLinkToNewTab(`https://www.bilibili.com/?page=${dockItem.page}`)
+}
+
+function handleBackToTopOrRefresh(action: 'backToTop' | 'refresh' | 'auto' = 'auto') {
+  if (action === 'backToTop') {
+    emit('backToTop')
+  }
+  else if (action === 'refresh') {
+    emit('refresh')
+    emit('backToTop')
+  }
+  else {
+    if (reachTop.value)
+      emit('refresh')
+    else
+      emit('backToTop')
+  }
+}
+
+function isDockItemActivated(dockItem: DockItem): boolean {
+  return props.activatedPage === dockItem.page && isHomePage()
+}
+
+const { width: windowWidth, height: windowHeight } = useWindowSize()
+const { width: dockWidth, height: dockHeight } = useElementSize(dockContentRef)
+
+const dockScale = computed((): number => {
+  if (!dockHeight.value || !dockWidth.value)
+    return 1
+
+  const maxAllowedHeight = windowHeight.value - 180
+  const maxAllowedWidth = windowWidth.value - 180
+
+  // Calculate scale factors for both dimensions
+  const heightScale = dockHeight.value > maxAllowedHeight
+    ? maxAllowedHeight / dockHeight.value
+    : 1
+
+  const widthScale = dockWidth.value > maxAllowedWidth
+    ? maxAllowedWidth / dockWidth.value
+    : 1
+
+  // Use the smaller scale to ensure dock fits in both dimensions
+  return Math.min(heightScale, widthScale)
+})
+
+const dockTransformStyle = computed((): { transform: string, transformOrigin: string } => {
+  const position = settings.value.dockPosition
+  const scale = dockScale.value
+  dockContentRef.value?.style.setProperty('--scale', `${scale}`)
+
+  // Adjust origin based on dock position
+  const origin = {
+    left: 'left center',
+    right: 'right center',
+    bottom: 'center bottom',
+  }[position] || 'center center'
+
+  return {
+    transform: `scale(${scale})`,
+    transformOrigin: origin,
+  }
+})
 </script>
 
 <template>
   <aside
     class="dock-wrap"
-    pos="absolute top-0" flex="~ col justify-center items-center" w-full h-full
-    z-1 pointer-events-none
+    pos="fixed top-0" z-100 flex="~ col justify-center items-center" w-full h-full
+    z-10 pointer-events-none
   >
     <!-- Edge Div -->
     <div
@@ -110,13 +235,17 @@ function handleBackToTopOrRefresh() {
 
     <!-- Dock Content -->
     <div
+      ref="dockContentRef"
       class="dock-content"
       :class="{
-        left: settings.dockPosition === 'left',
-        right: settings.dockPosition === 'right',
-        bottom: settings.dockPosition === 'bottom',
-        hide: hideDock,
+        'left': settings.dockPosition === 'left',
+        'right': settings.dockPosition === 'right',
+        'bottom': settings.dockPosition === 'bottom',
+        'hide': hideDock,
+        'half-hide': settings.halfHideDock,
+        'hover': dockContentHover,
       }"
+      :style="dockTransformStyle"
       @mouseenter="toggleHideDock(false)"
       @mouseleave="toggleHideDock(true)"
     >
@@ -128,18 +257,20 @@ function handleBackToTopOrRefresh() {
             <button
               class="dock-item group"
               :class="{
-                active: activatedPage === dockItem.page,
-                inactive: hoveringDockItem.themeMode && isDark,
+                'active': isDockItemActivated(dockItem),
+                'inactive': hoveringDockItem.themeMode && isDark,
+                'disable-glowing-effect': settings.disableDockGlowingEffect,
               }"
-              @click="emit('changePage', dockItem.page)"
+              @click="handleDockItemClick($event, dockItem)"
+              @click.middle="openDockItemInNewTab(dockItem)"
             >
               <div
-                v-show="activatedPage !== dockItem.page"
+                v-show="!isDockItemActivated(dockItem)"
                 :class="dockItem.icon"
                 text-xl
               />
               <div
-                v-show="activatedPage === dockItem.page"
+                v-show="isDockItemActivated(dockItem)"
                 :class="dockItem.iconActivated"
                 text-xl
               />
@@ -162,14 +293,18 @@ function handleBackToTopOrRefresh() {
             pos="absolute top-0 left-0 group-hover:top-2px group-hover:left--4px"
             w-full h-full bg-white rounded="1/2"
             z--2 pointer-events-none
-            shadow="group-hover:[-8px_4px_160px_20px_hsla(226deg,85%,77%,1),-8px_4px_100px_12px_hsla(226deg,85%,77%,0.8),-8px_4px_60px_10px_hsla(226deg,85%,77%,0.6),-8px_4px_20px_4px_hsla(226deg,85%,77%,0.4),-4px_2px_8px_0_hsla(226deg,85%,77%,0.8)]"
+            :shadow="
+              settings.disableDockGlowingEffect
+                ? 'none'
+                : 'group-hover:[-8px_4px_160px_20px_hsla(226deg,85%,77%,1),-8px_4px_100px_12px_hsla(226deg,85%,77%,0.8),-8px_4px_60px_10px_hsla(226deg,85%,77%,0.6),-8px_4px_20px_4px_hsla(226deg,85%,77%,0.4),-4px_2px_8px_0_hsla(226deg,85%,77%,0.8)]'"
             opacity-0 group-hover:opacity-100
             duration-600
           />
 
           <button
             class="dock-item"
-            bg="!dark-hover:$bew-bg" transform="!dark-hover:scale-100" shadow="!dark-hover:[inset_4px_-2px_8px_hsla(226deg,85%,77%,1)]"
+            bg="!dark-hover:$bew-bg" transform="!dark-hover:scale-100"
+            :shadow="settings.disableDockGlowingEffect ? 'none' : '!dark-hover:[inset_4px_-2px_8px_hsla(226deg,85%,77%,1)]'"
             pointer-events-auto
             @click="toggleDark"
             @mouseenter="hoveringDockItem.themeMode = true"
@@ -203,27 +338,68 @@ function handleBackToTopOrRefresh() {
         </Tooltip>
       </div>
 
-      <button
-        v-if="settings.moveBackToTopOrRefreshButtonToDock && activatedPage !== AppPage.Search"
-        class="back-to-top-or-refresh-btn"
-        :class="{
-          inactive: hoveringDockItem.themeMode && isDark,
+      <!-- Back to top & refresh buttons -->
+      <div
+        v-if="showBackToTopOrRefreshButton"
+        :style="{
+          bottom: settings.dockPosition === 'bottom' ? 'unset' : 0,
+          right: settings.dockPosition === 'bottom' ? 0 : 'unset',
+          transform: settings.dockPosition === 'bottom' ? 'translate(100%, 0)' : 'translateY(100%)',
+          flexDirection: settings.dockPosition === 'bottom' ? 'row' : 'column',
         }"
-        @click="handleBackToTopOrRefresh"
+        pos="absolute"
+        flex="~ gap-2"
       >
-        <Transition name="fade">
-          <Icon
-            v-if="reachTop"
-            icon="line-md:rotate-270"
-            shrink-0 rotate-90 absolute text-2xl
-          />
-          <Icon
-            v-else
-            icon="line-md:arrow-small-up"
-            shrink-0 absolute text-2xl
-          />
-        </Transition>
-      </button>
+        <template
+          v-if="settings.backToTopAndRefreshButtonsAreSeparated"
+        >
+          <template v-for="key in 2" :key="key">
+            <Transition name="fade">
+              <button
+                v-if="key === 1 || key === 2 && !reachTop"
+                class="back-to-top-or-refresh-btn"
+                :class="{
+                  inactive: hoveringDockItem.themeMode && isDark,
+                }"
+                @click="handleBackToTopOrRefresh(key === 1 ? 'refresh' : 'backToTop')"
+              >
+                <Icon
+                  v-if="key === 1"
+                  icon="line-md:rotate-270"
+                  shrink-0 rotate-90 absolute text-2xl
+                />
+                <Icon
+                  v-else
+                  icon="line-md:arrow-small-up"
+                  shrink-0 absolute text-2xl
+                />
+              </button>
+            </Transition>
+          </template>
+        </template>
+        <template v-else>
+          <button
+            class="back-to-top-or-refresh-btn"
+            :class="{
+              inactive: hoveringDockItem.themeMode && isDark,
+            }"
+            @click="handleBackToTopOrRefresh('auto')"
+          >
+            <Transition name="fade">
+              <Icon
+                v-if="reachTop"
+                icon="line-md:rotate-270"
+                shrink-0 rotate-90 absolute text-2xl
+              />
+              <Icon
+                v-else
+                icon="line-md:arrow-small-up"
+                shrink-0 absolute text-2xl
+              />
+            </Transition>
+          </button>
+        </template>
+      </div>
     </div>
   </aside>
 </template>
@@ -256,27 +432,36 @@ function handleBackToTopOrRefresh() {
 }
 
 .dock-content {
-  --uno: "absolute flex justify-center items-center duration-300";
+  --uno: "absolute flex justify-center items-center duration-300 scale-$scale";
 
   &.left {
     --uno: "left-2 after:right--4px";
   }
-  &.left.hide {
-    --uno: "opacity-0 translate-x--100%";
+  &.left.hide:not(.hover) {
+    --uno: "opacity-0 !translate-x--100%";
+  }
+  &.left.half-hide:not(.hover) {
+    --uno: "!opacity-60 !translate-x--50%";
   }
 
   &.right {
     --uno: "right-2 after:left--4px";
   }
-  &.right.hide {
-    --uno: "opacity-0 translate-x-100%";
+  &.right.hide:not(.hover) {
+    --uno: "opacity-0 !translate-x-100%";
+  }
+  &.right.half-hide:not(.hover) {
+    --uno: "!opacity-60 !translate-x-50%";
   }
 
   &.bottom {
     --uno: "top-unset bottom-0";
   }
-  &.bottom.hide {
-    --uno: "opacity-0 translate-y-100%";
+  &.bottom.hide:not(.hover) {
+    --uno: "opacity-0 !translate-y-100%";
+  }
+  &.bottom.half-hide:not(.hover) {
+    --uno: "!opacity-60 !translate-y-50%";
   }
 
   .divider {
@@ -301,9 +486,8 @@ function handleBackToTopOrRefresh() {
   }
 
   .back-to-top-or-refresh-btn {
-    --uno: "absolute md:bottom--45px bottom--35px";
     --uno: "transform active:important-scale-90 hover:scale-110";
-    --uno: "md:w-45px w-35px md:h-45px h-35px";
+    --uno: "lg:w-45px w-35px lg:h-45px h-35px";
     --uno: "grid place-items-center";
     --uno: "filter-$bew-filter-glass-1";
     --uno: "bg-$bew-elevated hover:bg-$bew-content-hover";
@@ -330,19 +514,19 @@ function handleBackToTopOrRefresh() {
   }
 
   &.bottom .back-to-top-or-refresh-btn {
-    --uno: "bottom-unset md:right--45px right--35px";
+    --uno: "bottom-unset lg:right--45px right--35px";
   }
 }
 
 .dock-item {
   --shadow-dark: 0 4px 30px 4px rgba(255, 255, 255, 0.6);
-  --shadow-active: 0 4px 30px var(--bew-theme-color-70);
+  --shadow-active: 0 4px 30px var(--bew-theme-color-60);
   --shadow-dark-active: 0 4px 20px rgba(255, 255, 255, 0.8);
-  --shadow-active-active: 0 4px 20px var(--bew-theme-color-90);
+  --shadow-active-active: 0 4px 20px var(--bew-theme-color-80);
 
   --uno: "relative transform active:important-scale-90 hover:scale-110";
-  --uno: "md:w-45px w-35px";
-  --uno: "md:lh-45px lh-35px";
+  --uno: "lg:w-45px w-35px";
+  --uno: "lg:lh-45px lh-35px";
   --uno: "p-0 flex items-center justify-center";
   --uno: "aspect-square relative";
   --uno: "leading-0";
@@ -365,8 +549,12 @@ function handleBackToTopOrRefresh() {
       var(--bew-shadow-2);
   }
 
+  &.disable-glowing-effect {
+    box-shadow: var(--bew-shadow-edge-glow-1), var(--bew-shadow-1) !important;
+  }
+
   &.active {
-    --uno: "important-bg-$bew-theme-color-auto text-$bew-text-auto";
+    --uno: "important-bg-$bew-theme-color text-white !dark:bg-white !dark:text-black";
     --uno: "shadow-$shadow-active dark:shadow-$shadow-dark";
     --uno: "active:shadow-$shadow-active-active dark-active:shadow-$shadow-dark-active";
   }
@@ -376,7 +564,7 @@ function handleBackToTopOrRefresh() {
   }
 
   svg {
-    --uno: "md:w-22px w-18px md:h-22px h-18px block align-middle";
+    --uno: "lg:w-22px w-18px lg:h-22px h-18px block align-middle";
   }
 }
 </style>

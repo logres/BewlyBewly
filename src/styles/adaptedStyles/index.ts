@@ -1,16 +1,9 @@
-import './common/common.scss'
-import './common/comments.scss'
-import './common/topBar.scss'
-import './common/footer.scss'
-import './common/modal.scss'
-import './common/btn.scss'
-import './common/userCard.scss'
-import './common/videoPlayer.scss'
-import './common/loginDialog.scss'
-import './shadowDom/comments.scss'
-import './thirdParty/bilibiliEvolved.scss'
+import './common'
+import './shadowDom'
+import './thirdParties'
 
-import { isHomePage } from '~/utils/main'
+import { settings } from '~/logic/storage'
+import { isHomePage, isInIframe } from '~/utils/main'
 
 async function setupStyles() {
   const currentUrl = document.URL
@@ -25,6 +18,10 @@ async function setupStyles() {
   else if (/https?:\/\/message\.bilibili\.com\.*/.test(currentUrl)) {
     await import('./pages/notificationsPage.scss')
     document.documentElement.classList.add('notificationsPage')
+
+    if (isInIframe() && settings.value.openNotificationsPageAsDrawer) {
+      document.documentElement.classList.add('drawer')
+    }
   }
 
   // moments page, new articles page 动态页, 新版专栏页
@@ -38,13 +35,19 @@ async function setupStyles() {
   }
 
   // history page 历史记录页
-  else if (/https?:\/\/(?:www\.)?bilibili\.com\/account\/history.*/.test(currentUrl)) {
+  else if (
+    /https?:\/\/(?:www\.)?bilibili\.com\/account\/history.*/.test(currentUrl)
+    || /https?:\/\/(?:www\.)?bilibili\.com\/history.*/.test(currentUrl)
+  ) {
     await import('./pages/historyPage.scss')
     document.documentElement.classList.add('historyPage')
   }
 
   // watch later page 稍候再看页
-  else if (/https?:\/\/(?:www\.)?bilibili\.com\/watchlater\/#\/list.*/.test(currentUrl)) {
+  else if (
+    /https?:\/\/(?:www\.)?bilibili\.com\/watchlater\/list.*/.test(currentUrl)
+    || /https?:\/\/(?:www\.)?bilibili\.com\/watchlater\/#\/list.*/.test(currentUrl)
+  ) {
     await import('./pages/watchLaterPage.scss')
     document.documentElement.classList.add('watchLaterPage')
   }
@@ -74,6 +77,8 @@ async function setupStyles() {
     || /https?:\/\/(?:www\.)?bilibili\.com\/list\/watchlater.*/.test(currentUrl)
     // favorite playlist 收藏播放页
     || /https?:\/\/(?:www\.)?bilibili\.com\/list\/ml.*/.test(currentUrl)
+    // 视频合集
+    || /https?:\/\/(?:www\.)?bilibili\.com\/list\/.*/.test(currentUrl)
   ) {
     await import('./pages/videoPage.scss')
     document.documentElement.classList.add('videoPage')
@@ -127,10 +132,16 @@ async function setupStyles() {
     document.documentElement.classList.add('creativeCenterPage')
   }
 
-  // account settings page 帳戶設定頁
-  else if (/^https?:\/\/account\.bilibili\.com\/.*$/.test(currentUrl)) {
+  // account settings page 帳戶設定頁，除了大會員頁
+  else if (/^https?:\/\/account\.bilibili\.com\/(?!big).*$/.test(currentUrl)) {
     await import('./pages/accountSettingsPage.scss')
     document.documentElement.classList.add('accountSettingsPage')
+  }
+
+  // premium page bilibili 大會員頁
+  else if (/^https?:\/\/account\.bilibili\.com\/big.*$/.test(currentUrl)) {
+    await import('./pages/premiumPage.scss')
+    document.documentElement.classList.add('premiumPage')
   }
 
   // login page 登入頁
